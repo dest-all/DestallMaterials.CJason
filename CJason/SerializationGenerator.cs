@@ -1,52 +1,10 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace CJason
 {
-    public static class DeserializationGenerator
-    {
-        public const string DeserializeFromMethodName = "DeserializeFrom";
-
-        public static IEnumerable<(ITypeSymbol, string)> GetDeserializingParameters(
-            this ITypeSymbol type
-        ) =>
-            type.GetMembers()
-                .OfType<IPropertySymbol>()
-                .Where(p => p.SetMethod != null && p.DeclaredAccessibility == Accessibility.Public)
-                .Select(p => (p.Type, p.Name));
-
-        public static string DeserializeFromCode(
-            this ITypeSymbol type,
-            string spanType = "System.ReadOnlySpan<char>",
-            string spanVar = "source"
-        )
-        {
-            var code = new StringBuilder();
-
-            var properties = GetDeserializingParameters(type).ToArray();
-            for (int i = 0; i < properties.Length; i++)
-            {
-                var parameter = properties[i];
-                code.AppendLine($"{parameter.Item1.ToDisplayString()} {parameter.Item2} = default;");                
-            }
-
-            for (int i = 0; i < properties.Length; i++)
-            {
-                var parameter = properties[i];
-            }
-
-            var result = code.ToString();
-
-            return result;
-        }
-    }
-
     public static class SerializationGenerator
     {
         public const string SerializeToMethodName = "SerializeTo";
@@ -59,11 +17,13 @@ namespace CJason
 
         static string PutSerializationToSpan(
             ITypeSymbol type,
+            SerializationSettings serializationSettings = null,
             string valueVariableName = "item",
             string spanVariableName = "span",
             string actualLengthVariableName = "actualLength"
         )
         {
+            var ss = serializationSettings ?? new SerializationSettings();
             var code = new StringBuilder();
             code.AppendLine($"{actualLengthVariableName} = 2;");
             code.AppendLine("int current = 1;");
@@ -102,7 +62,7 @@ namespace CJason
                     var checkNull = propertyType.IsReferenceType;
                     var checkDefault = isPrimitive && !checkNull;
 
-                    string appendedPropertyName = $"\\\"{propertyName}\\\":";
+                    string appendedPropertyName = $"\\\"{(ss.LowerPropertyCase ? propertyName.LowerFirstLetter() : propertyName)}\\\":";
                     int appendedPropertyNameLength = propertyName.Length + 3;
 
                     if (checkDefault || checkNull)
@@ -206,7 +166,7 @@ public static void {SerializeToMethodName}(
         out int {actualLengthVariableName} 
     )
 {{
-    {PutSerializationToSpan(type, valueVariableName, spanVariableName, actualLengthVariableName)} 
+    {PutSerializationToSpan(type, null, valueVariableName, spanVariableName, actualLengthVariableName)} 
 }}
 
 public static string {SerializeMethodName}(this {typeString} {valueVariableName})

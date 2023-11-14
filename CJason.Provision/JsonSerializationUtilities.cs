@@ -5,7 +5,9 @@ using System.Text.Json;
 
 namespace CJason.Provision;
 
-public delegate JsonPiece ReadValue<T>(JsonPiece jsonPiece, out T parsedValue);
+public delegate JsonPiece RemoveValue<T>(JsonPiece jsonPiece, out T parsedValue);
+
+public delegate T ParseValue<T>(JsonPiece jsonPiece);
 
 public static class JsonSerializationUtilities
 {
@@ -90,7 +92,9 @@ public static class JsonSerializationUtilities
 
         propertyName = jsonPiece[1..i];
 
-        return jsonPiece[(i + 1)..];
+        jsonPiece = jsonPiece[(i + 1)..];
+
+        return jsonPiece;
     }
 
     public static JsonPiece SkipToPropertyName(this JsonPiece jsonPiece)
@@ -151,93 +155,7 @@ public static class JsonSerializationUtilities
         return jsonPiece[..i];
     }
 
-    public static JsonPiece RemoveQuotedValue(this JsonPiece jsonPiece, out JsonPiece inQuotes)
-    {
-        var firstSymbol = jsonPiece[0];
-
-        if (firstSymbol != '"')
-        {
-            throw new JsonException();
-        }
-
-        int i = 1;
-        bool isClosed = false;
-        bool isEscaped = false;
-        int length = jsonPiece.Length;
-        for (; i < length; i++)
-        {
-            var c = jsonPiece[i];
-            if (c == '\\' || isEscaped)
-            {
-                isEscaped = !isEscaped;
-            }
-            else if (c == '"')
-            {
-                isClosed = true;
-                break;
-            }
-        }
-        if (!isClosed)
-        {
-            throw new JsonException();
-        }
-
-        inQuotes = jsonPiece[1..i];
-
-        return jsonPiece[(i + 1)..];
-    }
-
-    static JsonPiece SkipOverClosedBracket(this JsonPiece jsonPiece, char bracketSymbol)
-    {
-        int i = 1;
-        var currentCharacter = jsonPiece[i];
-        do
-        {
-            if (currentCharacter == '"')
-            {
-                jsonPiece = jsonPiece[i..].RemoveQuotedValue(out var _);
-                i = 0;
-                currentCharacter = jsonPiece[i];
-                continue;
-            }
-            currentCharacter = jsonPiece[++i];
-        }
-        while (currentCharacter != bracketSymbol);
-
-        return jsonPiece[(i + 1)..];
-    }
-
-    public static JsonPiece SkipValue(this JsonPiece jsonPiece)
-    {
-        var firstSymbol = jsonPiece[0];
-
-        if (firstSymbol == '"')
-        {
-            return jsonPiece.RemoveQuotedValue(out var _);
-        }
-
-        if (firstSymbol == '{')
-        {
-            return jsonPiece.SkipOverClosedBracket('}');
-        }
-
-        if (firstSymbol == '[')
-        {
-            return jsonPiece.SkipOverClosedBracket(']');
-        }
-
-        int j = 0;
-        char c;
-        do
-        {
-            c = jsonPiece[j++];
-        }
-        while (!c.IsClosingCharacter());
-
-        return jsonPiece[(j - 1)..];
-    }
-
-    public static JsonPiece RemoveStringValue(this JsonPiece jsonPiece, out string result)
+    public static JsonPiece RemoveQuotedValue<T>(this JsonPiece jsonPiece, ParseValue<T> parse, out T value)
     {
         var firstSymbol = jsonPiece[0];
 
@@ -276,20 +194,79 @@ public static class JsonSerializationUtilities
         }
         if (escapedCount == 0)
         {
-            result = new(jsonPiece[1..i]);
+            value = parse(jsonPiece[1..i]);
             return jsonPiece[(i + 1)..];
         }
 
-        result = CopyToStringWithoutEscapedCharacters(jsonPiece[..i], escaped, escapedCount);
+        Span<char> parsedBuffer = stackalloc char[length - escapedCount - 1];
+
+        CopyWithoutEscapedCharacters(jsonPiece[..i], escaped, escapedCount, parsedBuffer);
+
+        value = parse(parsedBuffer);
 
         return jsonPiece[(i + 1)..];
     }
 
-    static string CopyToStringWithoutEscapedCharacters(JsonPiece jsonPiece, Span<int> escapedLots, int escapedCount)
+    public static JsonPiece SkipOverClosedBracket(this JsonPiece jsonPiece, char bracketSymbol)
+    {
+        if (jsonPiece.IsEmpty)
+        {
+            throw new JsonException();
+        }
+
+        int i = 0;
+        var currentCharacter = jsonPiece[i];
+
+        while (currentCharacter != bracketSymbol)
+        {
+            if (currentCharacter == '"')
+            {
+                jsonPiece = jsonPiece[i..].RemoveQuotedValue(chars => default(string), out var _);
+                i = 0;
+                currentCharacter = jsonPiece[i];
+                continue;
+            }
+            currentCharacter = jsonPiece[++i];
+        }
+
+        jsonPiece = jsonPiece[(i + 1)..];
+
+        return jsonPiece;
+    }
+
+    public static JsonPiece SkipValue(this JsonPiece jsonPiece)
+    {
+        var firstSymbol = jsonPiece[0];
+
+        if (firstSymbol == '"')
+        {
+            return jsonPiece.RemoveQuotedValue(chars => default(string), out var _);
+        }
+
+        if (firstSymbol == '{')
+        {
+            return jsonPiece.SkipOverClosedBracket('}');
+        }
+
+        if (firstSymbol == '[')
+        {
+            return jsonPiece.SkipOverClosedBracket(']');
+        }
+
+        int j = 0;
+        char c;
+        do
+        {
+            c = jsonPiece[j++];
+        }
+        while (!c.IsClosingCharacter());
+
+        return jsonPiece[(j - 1)..];
+    }
+
+    static void CopyWithoutEscapedCharacters(JsonPiece jsonPiece, Span<int> escapedLots, int escapedCount, Span<char> targetBuffer)
     {
         int length = jsonPiece.Length;
-
-        Span<char> result = stackalloc char[length - escapedCount - 1];
 
         int currentLot = 0;
         int currentEscapedIndex = 0;
@@ -304,10 +281,8 @@ public static class JsonSerializationUtilities
                 continue;
             }
             var c = jsonPiece[j];
-            result[currentLot++] = c;
+            targetBuffer[currentLot++] = c;
         }
-
-        return new(result);
     }
 
     public static JsonPiece ReadPrimitiveValue(this JsonPiece jsonPiece)
@@ -324,7 +299,7 @@ public static class JsonSerializationUtilities
         return jsonPiece[0..i];
     }
 
-    public static JsonPiece RemoveArrayValues<T>(this JsonPiece json, ReadValue<T> getValue, out List<T> values)
+    public static JsonPiece RemoveList<T>(this JsonPiece json, RemoveValue<T> removeValue, out List<T> values)
     {
         json = json.SkipInsignificantSymbolsLeft();
 
@@ -360,7 +335,7 @@ public static class JsonSerializationUtilities
 
             if (!isClosed)
             {
-                json = getValue(json, out var item).SkipInsignificantSymbolsLeft();
+                json = removeValue(json, out var item).SkipInsignificantSymbolsLeft();
                 result.Add(item);
             }
         }
@@ -368,6 +343,40 @@ public static class JsonSerializationUtilities
 
         values = result;
         return json[1..];
+    }
+
+    public static JsonPiece RemoveArray<T>(this JsonPiece json, RemoveValue<T> removeValue, out T[] arr)
+    {
+        json = json.RemoveList(removeValue, out var list);
+        arr = list.ToArray();
+        return json;
+    }
+
+    public static JsonPiece RemoveDictionary<TKey, TValue>(
+        this JsonPiece json,
+        RemoveValue<TKey> removeKey,
+        RemoveValue<TValue> removeValue,
+        out Dictionary<TKey, TValue> dictionary)
+    {
+        dictionary = new Dictionary<TKey, TValue>();
+
+        json = json
+            .EnterObject();
+
+        while (json[0] != '}')
+        {
+            json = removeValue(
+                removeKey(json.SkipToPropertyName(), out var key)
+                .SkipToPropertyValue(), 
+                out var value)
+                .SkipInsignificantSymbolsLeft();
+
+            dictionary.Add(key, value);
+        }
+
+        json = json[1..];
+
+        return json;
     }
 
     public static JsonPiece EnterObject(this JsonPiece jsonPiece)
@@ -391,5 +400,26 @@ public static class JsonSerializationUtilities
         number = T.Parse(numberPiece, System.Globalization.NumberStyles.Number, CultureInfo.CurrentCulture.NumberFormat);
 
         return jsonPiece[numberPiece.Length..];
+    }
+
+    public static JsonPiece RemoveString(this JsonPiece jsonPiece, out string str)
+    {
+        jsonPiece = jsonPiece.RemoveQuotedValue(chars => new string(chars), out str);
+        return jsonPiece;
+    }
+
+    public static JsonPiece RemovePrimitiveValue<T>(this JsonPiece jsonPiece, ParseValue<T> parseValue, out T value)
+    {
+        int i = 0;
+        for (; i < jsonPiece.Length; i++)
+        {
+            var c = jsonPiece[i];
+            if (c.IsClosingCharacter() || c.IsEmptyCharacter())
+            {
+                break;
+            }
+        }
+        value = parseValue(jsonPiece[0..i]);
+        return jsonPiece[i..];
     }
 }

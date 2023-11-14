@@ -1,4 +1,5 @@
 ﻿using CJason.Provision;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using JsonPiece = System.ReadOnlySpan<char>;
 
@@ -25,9 +26,7 @@ public class UtilityTests
 
         JsonPiece json = $" :  \"{dateTime}\" }}";
 
-        json.SkipToPropertyValue().RemoveQuotedValue(out var quotedValue);
-
-        var parsedValue = DateTime.Parse(quotedValue);
+        json.SkipToPropertyValue().RemoveQuotedValue(j => DateTime.Parse(j), out var parsedValue);
 
         Assert.That(parsedValue, Is.EqualTo(dateTime));
     }
@@ -37,7 +36,7 @@ public class UtilityTests
     {
         JsonPiece input = @" : "" \"" \"" trtret \\\"" \""""    ,  ";
 
-        input.SkipToPropertyValue().RemoveStringValue(out var readValue);
+        input.SkipToPropertyValue().RemoveQuotedValue(chars => new string(chars), out var readValue);
 
         string expected = @" "" "" trtret \"" """;
 
@@ -51,7 +50,7 @@ public class UtilityTests
 
         JsonPiece json = $" :  \"{dateTime}\" }}";
 
-        json.SkipToPropertyValue().RemoveStringValue(out var quotedValue);
+        json.SkipToPropertyValue().RemoveQuotedValue(chars => new string(chars), out var quotedValue);
 
         var parsedValue = DateTime.Parse(quotedValue);
 
@@ -79,7 +78,7 @@ public class UtilityTests
 
         JsonPiece json = $" :  [ {n1}, \t\n {n2} \n, \n {n3}, {n4}, {n5} ]";
 
-        json.SkipToPropertyValue().RemoveArrayValues<int>(JsonSerializationUtilities.RemoveNumber<int>, out var ints);
+        json.SkipToPropertyValue().RemoveArray<int>(JsonSerializationUtilities.RemoveNumber<int>, out var ints);
 
         Assert.Contains(n1, ints);
         Assert.Contains(n2, ints);
@@ -95,7 +94,7 @@ public class UtilityTests
 
         JsonPiece json = $" :  [ \"{s1}\", \t\n \"{s2}\" \n, \n \"{s3}\", \"{s4}\", \"{s5}\" ]";
 
-        json.SkipToPropertyValue().RemoveArrayValues<string>(JsonSerializationUtilities.RemoveStringValue, out var strings);
+        json.SkipToPropertyValue().RemoveArray<string>(JsonSerializationUtilities.RemoveString, out var strings);
 
         Assert.Contains(s1, strings);
         Assert.Contains(s2, strings);
@@ -147,7 +146,7 @@ public class UtilityTests
             .EnterObject()
             .RemovePropertyName(out dp1)
             .SkipToPropertyValue()
-            .RemoveStringValue(out dv1)
+            .RemoveString(out dv1)
             .SkipToPropertyName()
             .RemovePropertyName(out dp2)
             .SkipToPropertyValue()
@@ -155,9 +154,7 @@ public class UtilityTests
             .SkipToPropertyName()
             .RemovePropertyName(out dp3)
             .SkipToPropertyValue()
-            .RemoveQuotedValue(out var dv3_0);
-
-        dv3 = DateTime.Parse(dv3_0);
+            .RemoveQuotedValue(j => DateTime.Parse(j), out dv3);
 
         Assert.That(new string(dp1), Is.EqualTo(p1));
         Assert.That(new string(dv1), Is.EqualTo(v1));
@@ -208,5 +205,21 @@ public class UtilityTests
         var skipped = json.SkipValue();
 
         Assert.That(skipped.Length, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void SwitchJsonPiece()
+    {
+        const string example = "example";
+        JsonPiece chars = example;
+
+        short index = chars switch
+        {
+            "12345" => -1,
+            example => 1,
+            _ => -1
+        };
+
+        Assert.AreEqual(1, index);
     }
 }

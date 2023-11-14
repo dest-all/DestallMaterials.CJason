@@ -4,7 +4,6 @@ using CJason;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using SampleNamespace;
 using SpanBuilder;
 
 namespace GenTests;
@@ -31,29 +30,6 @@ public class All
     [SetUp]
     public void Setup() { }
 
-    [Test]
-    public void TestJsonSerialization()
-    {
-        var father = new Father
-        {
-            Name = "Alex",
-            Age = 51,
-            Children = new Child[]
-            {
-                new() { Name = "Igor", Age = 26 },
-                new() { Name = "Someone", Age = 555 }
-            }
-        };
-
-        var fathers = new Father[] 
-        {
-            father
-        };
-
-        var json = fathers.Serialize();
-
-        var deserialized = JsonSerializer.Deserialize<Father[]>(json);
-    }
 
     [Test]
     public void TestCodeGeneration()
@@ -77,12 +53,18 @@ public class All
         {
             var classSymbol = model.GetDeclaredSymbol(cds);
             generated += (
+                "\n" + compilation.GenerateRemoveObjectMethod(classSymbol) +
                 "\n" + SerializationGenerator.GenerateSerializationMethodsEtc(classSymbol)
             );
         }
 
         generated =
-            $@"{_sampleClassCode}
+            $@"
+using JsonPiece = System.ReadOnlySpan<char>;
+using CJason.Provision;
+
+
+{_sampleClassCode}
         namespace SampleNamespace 
         {{
             public static class ArtificialStringifier

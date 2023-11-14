@@ -1,3 +1,8 @@
+
+using JsonPiece = System.ReadOnlySpan<char>;
+using CJason.Provision;
+
+
 namespace SampleNamespace {
         public class Father
         {
@@ -44,6 +49,55 @@ namespace SampleNamespace {
                 }
 
                 
+public static System.ReadOnlySpan<char> RemoveObject(this System.ReadOnlySpan<char> json, out SampleNamespace.Father item) {string name = default;
+int age = default;
+SampleNamespace.Child[] children = default;
+const int propsCount = 3;
+int i = 0;
+json = json.EnterObject();
+while (i < propsCount)
+{
+    json = json
+        .SkipToPropertyName()
+        .RemovePropertyName(out var propertyName)
+        .SkipToPropertyValue();
+
+    short propertyIndex = propertyName switch 
+    {
+        "name" => 0,
+"age" => 1,
+"children" => 2,
+        _ => -1
+    };
+
+    json = propertyIndex switch 
+    {
+        0 => json.RemoveQuotedValue(j => new string(j), out name),
+1 => json.RemovePrimitiveValue<int>(j => int.Parse(j), out age),
+2 => json.RemoveArray((JsonPiece jsonjson, out SampleNamespace.Child children_children) => { var r = jsonjson.RemoveObject(out children_children); return r; }, out children),
+        _ => json.SkipValue()
+    };
+
+    if (propertyIndex != -1)
+    {
+        i++;
+    }
+}
+
+item = new()
+{
+    Name = name,
+Age = age,
+Children = children
+};
+
+json = json.SkipOverClosedBracket('}');
+
+return json;
+
+}
+
+
 
 
 ref struct SampleNamespace_Father_Length
@@ -90,7 +144,7 @@ int current = 1;
 span[0] = '{';
 span = span[1..];
 if (item.Name is not null) {
-"\"Name\":".AsSpan().CopyTo(span);
+"\"name\":".AsSpan().CopyTo(span);
 actualLength += 7;
 span = span[7..];
 current = $"\"{item.Name}\"".AsSpan().CopiedTo(span);
@@ -100,7 +154,7 @@ span = span[current..];
 actualLength += current;
 }
 if (item.Age != default) {
-"\"Age\":".AsSpan().CopyTo(span);
+"\"age\":".AsSpan().CopyTo(span);
 actualLength += 6;
 span = span[6..];
 current = item.Age.ToString().AsSpan().CopiedTo(span);
@@ -110,7 +164,7 @@ span = span[current..];
 actualLength += current;
 }
 if (item.Children is not null) {
-"\"Children\":".AsSpan().CopyTo(span);
+"\"children\":".AsSpan().CopyTo(span);
 actualLength += 11;
 span = span[11..];
 item.Children.SerializeTo(span, out current);
@@ -177,6 +231,51 @@ public static string Serialize(this Span<SampleNamespace.Father> items)
 public static string Serialize(this IEnumerable<SampleNamespace.Father> source)
     => source.EnsureSpan().Serialize();
 
+public static System.ReadOnlySpan<char> RemoveObject(this System.ReadOnlySpan<char> json, out SampleNamespace.Child item) {int age = default;
+string name = default;
+const int propsCount = 2;
+int i = 0;
+json = json.EnterObject();
+while (i < propsCount)
+{
+    json = json
+        .SkipToPropertyName()
+        .RemovePropertyName(out var propertyName)
+        .SkipToPropertyValue();
+
+    short propertyIndex = propertyName switch 
+    {
+        "age" => 0,
+"name" => 1,
+        _ => -1
+    };
+
+    json = propertyIndex switch 
+    {
+        0 => json.RemovePrimitiveValue<int>(j => int.Parse(j), out age),
+1 => json.RemoveQuotedValue(j => new string(j), out name),
+        _ => json.SkipValue()
+    };
+
+    if (propertyIndex != -1)
+    {
+        i++;
+    }
+}
+
+item = new()
+{
+    Age = age,
+Name = name
+};
+
+json = json.SkipOverClosedBracket('}');
+
+return json;
+
+}
+
+
 
 
 ref struct SampleNamespace_Child_Length
@@ -221,7 +320,7 @@ int current = 1;
 span[0] = '{';
 span = span[1..];
 if (item.Age != default) {
-"\"Age\":".AsSpan().CopyTo(span);
+"\"age\":".AsSpan().CopyTo(span);
 actualLength += 6;
 span = span[6..];
 current = item.Age.ToString().AsSpan().CopiedTo(span);
@@ -231,7 +330,7 @@ span = span[current..];
 actualLength += current;
 }
 if (item.Name is not null) {
-"\"Name\":".AsSpan().CopyTo(span);
+"\"name\":".AsSpan().CopyTo(span);
 actualLength += 7;
 span = span[7..];
 current = $"\"{item.Name}\"".AsSpan().CopiedTo(span);

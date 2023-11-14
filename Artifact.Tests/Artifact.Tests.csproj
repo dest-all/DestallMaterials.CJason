@@ -18,9 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../CJason/CJason.csproj" />
-    <ProjectReference Include="../SpanBuilder/SpanBuilder.csproj" />
-    <ProjectReference Include="..\CJason.Provision\CJason.Provision.csproj" />
+    <ProjectReference Include="..\Artifact\Artifact.csproj" />
   </ItemGroup>
 
 </Project>

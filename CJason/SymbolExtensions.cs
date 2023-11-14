@@ -71,5 +71,22 @@ namespace CJason
             }
             return false;
         }
+
+        public static bool IsDictionary(this ITypeSymbol type, out ITypeSymbol keyType, out ITypeSymbol valueType)
+        {
+            if (!type.ToDisplayString().StartsWith("System.Collections.Generic.Dictionary<"))
+            {
+                keyType = null;
+                valueType = null;
+                return false;
+            }
+
+            var nts = type as INamedTypeSymbol;
+
+            keyType = nts.TypeArguments.First();
+            valueType = nts.TypeArguments.Last();
+
+            return true;
+        }
     }
 }
