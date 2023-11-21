@@ -8,18 +8,6 @@ namespace GenTests;
 public class UtilityTests
 {
     [Test]
-    public void DeserializeValue_Numbers()
-    {
-        const int input = 500;
-
-        JsonPiece json = $" :  {input}    }}  ";
-
-        var readValue = new string(json.SkipToPropertyValue().ReadPrimitiveValue());
-
-        Assert.That(readValue, Is.EqualTo(input.ToString()));
-    }
-
-    [Test]
     public void DeserializeValue_DateTime_1()
     {
         var dateTime = DateTime.Today;
@@ -64,11 +52,9 @@ public class UtilityTests
 
         JsonPiece json = $" : {value} , ";
 
-        var flagString = json.SkipToPropertyValue().ReadPrimitiveValue();
+        var flagString = json.SkipToPropertyValue().RemovePrimitiveValue(bool.Parse, out var flag);
 
-        var actual = bool.Parse(flagString);
-
-        Assert.That(actual, Is.EqualTo(value));
+        Assert.That(flag, Is.EqualTo(value));
     }
 
     [Test]
@@ -78,7 +64,7 @@ public class UtilityTests
 
         JsonPiece json = $" :  [ {n1}, \t\n {n2} \n, \n {n3}, {n4}, {n5} ]";
 
-        json.SkipToPropertyValue().RemoveArray<int>(JsonSerializationUtilities.RemoveNumber<int>, out var ints);
+        json.SkipToPropertyValue().RemoveArray<int>(JsonDeserializationUtilities.RemoveNumber<int>, out var ints);
 
         Assert.Contains(n1, ints);
         Assert.Contains(n2, ints);
@@ -88,13 +74,23 @@ public class UtilityTests
     }
 
     [Test]
+    public void Deserialize_NumberArray_2()
+    {
+        JsonPiece numbersArrayString = $"[1,1500]";
+
+        numbersArrayString.RemoveArray<int>(JsonDeserializationUtilities.RemoveNumber<int>, out var numbers);
+
+
+    }
+
+    [Test]
     public void Deserialize_StringArray()
     {
         var (s1, s2, s3, s4, s5) = ("34543543", "dfgdfgfd", "fdgfdgf", "-0-0-", "2324");
 
         JsonPiece json = $" :  [ \"{s1}\", \t\n \"{s2}\" \n, \n \"{s3}\", \"{s4}\", \"{s5}\" ]";
 
-        json.SkipToPropertyValue().RemoveArray<string>(JsonSerializationUtilities.RemoveString, out var strings);
+        json.SkipToPropertyValue().RemoveArray<string>(JsonDeserializationUtilities.RemoveString, out var strings);
 
         Assert.Contains(s1, strings);
         Assert.Contains(s2, strings);

@@ -48,6 +48,9 @@ public static class SpanExtensions
         return array;
     }
 
+    public static ReadOnlySpan<T> EnsureReadOnlySpan<T>(this IEnumerable<T> source)
+        => source.EnsureSpan();
+
     public static int CopiedTo<T>(this Span<T> source, Span<T> target)
     {
         source.CopyTo(target);

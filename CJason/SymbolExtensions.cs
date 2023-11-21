@@ -8,7 +8,7 @@ namespace CJason
     public static class SymbolExtensions
     {
         public static IReadOnlyList<Type> PrimitiveTypes =>
-            new Type[] { typeof(string), typeof(bool), typeof(DateTime), typeof(TimeSpan) }
+            new Type[] { typeof(string), typeof(bool), typeof(DateTime), typeof(TimeSpan), typeof(DateTimeOffset), typeof(char) }
                 .Concat(NumberTypes)
                 .ToArray();
 
@@ -74,17 +74,51 @@ namespace CJason
 
         public static bool IsDictionary(this ITypeSymbol type, out ITypeSymbol keyType, out ITypeSymbol valueType)
         {
-            if (!type.ToDisplayString().StartsWith("System.Collections.Generic.Dictionary<"))
+            var nts = type as INamedTypeSymbol;
+
+            if (nts is null || !type.ToDisplayString().StartsWith("System.Collections.Generic.Dictionary<") || nts.TypeArguments.Length != 2)
             {
                 keyType = null;
                 valueType = null;
                 return false;
             }
 
-            var nts = type as INamedTypeSymbol;
-
             keyType = nts.TypeArguments.First();
             valueType = nts.TypeArguments.Last();
+
+            return true;
+        }
+
+        public static bool IsKeyValuePairs(this ITypeSymbol type, out ITypeSymbol keyType, out ITypeSymbol valueType)
+        {
+            var nts = type as INamedTypeSymbol;
+            ITypeSymbol underEnumerable = default;
+            var keyValueInterface = type.AllInterfaces.FirstOrDefault(inter => 
+            {
+                if (inter.IsEnumerable(out underEnumerable))
+                {
+                    if (underEnumerable is INamedTypeSymbol enumNts)
+                    {
+                        if (enumNts.ToDisplayString().StartsWith("System.Collections.Generic.KeyValuePair<") && enumNts.TypeArguments.Length == 2)
+                        {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                return false;
+            });
+            if (keyValueInterface is null)
+            {
+                keyType = null;
+                valueType = null;
+                return false;
+            }
+
+            var kvType = underEnumerable as INamedTypeSymbol;
+
+            keyType = kvType.TypeArguments[0];
+            valueType = kvType.TypeArguments[1];
 
             return true;
         }

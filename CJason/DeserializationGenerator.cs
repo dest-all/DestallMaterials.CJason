@@ -120,20 +120,24 @@ return {json};
             {
                 return $"{jsonVariableName}.RemovePrimitiveValue<bool>(j => bool.Parse(j), out {variableToAssignValueTo})";
             }
-            if (typeKind == PropertyTypeVariant.DateTime)
+            if (typeKind == PropertyTypeVariant.ParsableQuoted)
             {
-                return $"{jsonVariableName}.RemoveQuotedValue(j => DateTime.Parse(j), out {variableToAssignValueTo})";
+                return $"{jsonVariableName}.RemoveQuotedValue(j => {type.ToDisplayString()}.Parse(j), out {variableToAssignValueTo})";
             }
             if (typeKind == PropertyTypeVariant.Object)
             {
                 return $"{jsonVariableName}.RemoveObject(out {variableToAssignValueTo})";
             }
+            if (typeKind == PropertyTypeVariant.Char)
+            {
+                return $"{jsonVariableName}.RemoveQuotedValue(j => j[0], out {variableToAssignValueTo})";
+            }
             if (typeKind == PropertyTypeVariant.Array)
             {
                 type.IsEnumerable(out var underEnumerable);
                 var implementationType = compilation.PickValueImplementationType(underEnumerable);
-                string v = $"{variableToAssignValueTo}_{variableToAssignValueTo}";
-                string j = jsonVariableName + jsonVariableName;
+                string v = $"{variableToAssignValueTo}_i";
+                string j = $"{jsonVariableName}_j";
                 var deserializeItemMethod = compilation.PickValueRemovalMethod(implementationType.Item2, implementationType.Item1, v, j);
 
                 return $"{jsonVariableName}.RemoveArray((JsonPiece {j}, out {underEnumerable.ToDisplayString()} {v}) => {{ var r = {deserializeItemMethod}; return r; }}, out {variableToAssignValueTo})";
@@ -144,8 +148,8 @@ return {json};
                 var keyImplementationType = compilation.PickValueImplementationType(keyType);
                 var valueImplementationType = compilation.PickValueImplementationType(valueType);
 
-                string v = $"{variableToAssignValueTo}_{variableToAssignValueTo}";
-                string j = $"{jsonVariableName}_{jsonVariableName}";
+                string v = $"{variableToAssignValueTo}_v";
+                string j = $"{jsonVariableName}_j";
 
                 var deserializeKeyMethod = compilation.PickValueRemovalMethod(keyImplementationType.Item2, keyImplementationType.Item1, v, j);
                 var deserializeValueMethod = compilation.PickValueRemovalMethod(valueImplementationType.Item2, valueImplementationType.Item1, v, j);
@@ -169,7 +173,7 @@ out {variableToAssignValueTo})";
                         nts.Is<string>() ? PropertyTypeVariant.String :
                         nts.IsNumber() ? PropertyTypeVariant.Number :
                         nts.Is<bool>() ? PropertyTypeVariant.Boolean :
-                        nts.Is<DateTime>() ? PropertyTypeVariant.DateTime : PropertyTypeVariant.None;
+                        nts.ValueIsInQuotes() ? (nts.Is<Char>() ? PropertyTypeVariant.Char : PropertyTypeVariant.ParsableQuoted) : PropertyTypeVariant.None;
 
                     if (propertyTypeKind != PropertyTypeVariant.None)
                     {
@@ -178,7 +182,7 @@ out {variableToAssignValueTo})";
 
                     if (nts.IsDictionary(out var key, out var value))
                     {
-                        var dictType = compilation.GetTypeByMetadataName($"System.Collections.Generic.Dictionary<{key.ToDisplayString()}, {value.ToDisplayString()}>");
+                        var dictType = nts.ConstructedFrom.Construct(key, value);
                         return (PropertyTypeVariant.Dictionary, dictType);
                     }
 
@@ -209,10 +213,11 @@ out {variableToAssignValueTo})";
             String,
             Number,
             Boolean,
-            DateTime,
+            ParsableQuoted,
             Object,
             Array,
-            Dictionary
+            Dictionary,
+            Char
         }
     }
 }

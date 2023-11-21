@@ -9,7 +9,7 @@ namespace CJason
     {
         public const string CalculateJsonLengthMethodName = "CalculateJsonLength";
 
-        public static int ConstantLength(ITypeSymbol type)
+        public static int GetConstantLength(ITypeSymbol type)
         {
             if (type.IsPrimitive())
             {
@@ -25,7 +25,7 @@ namespace CJason
                 .GetSerializableProperties(type)
                 .All(p =>
                 {
-                    var len = ConstantLength(p.Type);
+                    var len = GetConstantLength(p.Type);
                     result += len;
                     return len < 1;
                 });
@@ -54,7 +54,7 @@ namespace CJason
                 {
                     var line = $"public int {l.Name}";
                     ITypeSymbol propertyType = l.Type;
-                    var propertyConstLength = ConstantLength(propertyType);
+                    var propertyConstLength = GetConstantLength(propertyType);
                     if (propertyConstLength > 0)
                     {
                         line += $" => {propertyConstLength}";
@@ -96,58 +96,119 @@ ref struct {structName}
             return definition;
         }
 
-        public static string RenderCalculateJsonLengthMethod(ITypeSymbol type)
+        static void EnsurePresent<T>(this List<T> items, T item)
+        {
+            if (!items.Contains(item))
+            {
+                items.Add(item);
+            }
+        }
+
+        public static string RenderCalculateJsonLengthMethod(this ITypeSymbol type)
         {
             var structName = TypeLengthStructName(type);
 
             var head =
-                $@"static {structName} {CalculateJsonLengthMethodName}(this {type.ToDisplayString()} item)";
+                $@"static int {CalculateJsonLengthMethodName}(this {type.ToDisplayString()} item)";
+
             var properties = SerializationGenerator
                 .GetSerializableProperties(type)
-                .Where(p => ConstantLength(p.Type) < 1);
-            var propertiesSetting = properties.Select(p =>
+                .Select(p => (p, GetConstantLength(p.Type)));
+
+            var propertiyLengthsSetting = properties.Select(p =>
             {
-                var propType = p.Type;
-                var propName = p.Name;
-                if (propType.IsPrimitive())
+                var property = p.Item1;
+                var constantLength = p.Item2;
+                var lengthVar = $"item_{property.Name}_Length";
+                string lengthVarAssignment;
+                if (constantLength < 1)
                 {
-                    if (propType.Is<string>())
-                    {
-                        return $"{propName} = item.{propName}.Length";
-                    }
-                    return $"{propName} = item.{propName}.ToString().Length";
+                    lengthVarAssignment = $"var item_{property.Name} = item.{property.Name};\n" +
+                    $"var {lengthVar} = {property.Name.Length + 3} + {property.Type.CalculateJsonLengthExpression($"item_{property.Name}")};";
                 }
-                if (propType.IsEnumerable(out var underEnumerable))
+                else 
                 {
-                    return $"{propName} = item.{propName}.EnsureSpan().CalculateJsonLength()";
+                    lengthVarAssignment = $"const int {lengthVar} = {property.Name.Length + 3} + {constantLength};";
                 }
-                return $"{propName} = {CalculateJsonLengthMethodName}(item.{propName})";
-            });
+
+                return (lengthVar, lengthVarAssignment);
+            }).ToArray();
+
             var result =
                 $@"{head}
-            => new()
-            {{
-                {propertiesSetting.Join(",\n")}
-            }};";
+{{
+    {propertiyLengthsSetting.Select(t => t.Item2).Join("\n")}
+    var result = {propertiyLengthsSetting.Length} - 1 + {propertiyLengthsSetting.Select(t=>t.lengthVar).Join(" + ")};
+    return result;
+}}";
 
             return result;
         }
 
-        public static string CalculateSpanJsonLengthMethod(ITypeSymbol typeSymbol) =>
-            $@"
-public static int {CalculateJsonLengthMethodName}(this System.Span<{typeSymbol.ToDisplayString()}> items)
-{{
-    var result = 0;
-    var len = items.Length;
-    for (int i = 0; i < len; i++)
-    {{
-        var itemLength = items[i].{CalculateJsonLengthMethodName}();
-        result += itemLength;
-    }}
-    return result + 2; // + two square brackets
-}}";
+        public static bool ValueIsInQuotes(this ITypeSymbol type) => new Type[]
+        {
+            typeof(DateTime), typeof(TimeSpan), typeof(string), typeof(char)
+        }.Any(t => type.Is(t)) || type.ToDisplayString() == "System.DateOnly";
 
-        public static bool ValueIsInQuotes(this ITypeSymbol type) =>
-            type.Is<DateTime>() || type.Is<string>();
+
+        public static string CalculateJsonLengthExpression(this ITypeSymbol type, string variable)
+        {
+            string result;
+
+            var constantLength = type.GetConstantLength();
+
+            if (constantLength != -1)
+            {
+                return constantLength.ToString();
+            }
+
+            if (type.Is<string>())
+            {
+                return $"{variable}.Length * 2 + 2";
+            }
+
+            if (type.IsKeyValuePairs(out var key, out var value))
+            {
+                string valueVariable = $"{variable}_value";
+                string keyVariable = $"{variable}_key";
+                var calculateValueLength = CalculateJsonLengthExpression(value, valueVariable);
+                var calculateKeyLength = CalculateJsonLengthExpression(key, keyVariable);
+
+                result = $"{variable}.{CalculateJsonLengthMethodName}({keyVariable} => {calculateKeyLength}, {valueVariable} => {calculateValueLength})";
+
+                return result;
+            }
+            if (type.IsEnumerable(out var underEnumerable))
+            {
+                var constItemLength = underEnumerable.GetConstantLength();
+
+                if (constItemLength != -1)
+                {
+                    return $@"
+    {{
+        var itemsCount = {variable}.Count();
+        if (itemsCount == 0)
+        {{
+            return 2;
+        }}
+        return itemsCount * ({constantLength} + 1) - 1 + 2;
+    }}";
+                }
+
+                var itemVariable = $"{variable}_item";
+                var calculateItemLength = CalculateJsonLengthExpression(underEnumerable, itemVariable);
+
+                result = $"{variable}.{CalculateJsonLengthMethodName}({itemVariable} => {calculateItemLength})";
+
+                return result;
+            }
+
+            result = $"{variable}.{CalculateJsonLengthMethodName}()";
+
+            return result;
+
+            throw new NotImplementedException($"Can't calculate length of {type.ToDisplayString()} type variable.");
+        }
+
     }
 }

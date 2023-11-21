@@ -7,7 +7,7 @@ namespace CJason
 {
     public static class SerializationGenerator
     {
-        public const string SerializeToMethodName = "SerializeTo";
+        public const string FillWithMethodName = "FillWith";
         public const string SerializeMethodName = "Serialize";
 
         public static IEnumerable<IPropertySymbol> GetSerializableProperties(ITypeSymbol type) =>
@@ -15,49 +15,81 @@ namespace CJason
                 .OfType<IPropertySymbol>()
                 .Where(p => p.GetMethod != null && p.DeclaredAccessibility == Accessibility.Public);
 
+        public static IEnumerable<INamedTypeSymbol> GatherReferredTypes(this ITypeSymbol type)
+        {
+            var nts = type as INamedTypeSymbol;
+            if (type.IsPrimitive())
+            {
+                yield break;
+            }
+
+            bool isSystemType = nts == null || type.ContainingNamespace.ToDisplayString().StartsWith("System");
+
+            if (!isSystemType)
+            {
+                yield return nts;
+
+                foreach (var propType in nts.GetMembers().OfType<IPropertySymbol>().SelectMany(p => p.Type.GatherReferredTypes()))
+                {
+                    yield return propType;
+                }
+            }
+            else if (type.IsEnumerable(out var underEnumerable))
+            {
+                foreach (var dependency in underEnumerable.GatherReferredTypes())
+                {
+                    yield return dependency;
+                }
+            }
+            else if (type.IsKeyValuePairs(out var key, out var value))
+            {
+                foreach (var dependency in key.GatherReferredTypes())
+                {
+                    yield return dependency;
+                }
+                foreach (var dependency in value.GatherReferredTypes())
+                {
+                    yield return dependency;
+                }
+            }
+        }
+
         static string PutSerializationToSpan(
             ITypeSymbol type,
             SerializationSettings serializationSettings = null,
             string valueVariableName = "item",
-            string spanVariableName = "span",
-            string actualLengthVariableName = "actualLength"
+            string spanVariableName = "span"
         )
         {
             var ss = serializationSettings ?? new SerializationSettings();
             var code = new StringBuilder();
-            code.AppendLine($"{actualLengthVariableName} = 2;");
-            code.AppendLine("int current = 1;");
             if (type.IsPrimitive())
             {
                 if (type.ValueIsInQuotes())
                 {
                     code.AppendLine(
-                        $@"current = $""{{""\""{valueVariableName}\""""}}"".AsSpan().CopiedTo({spanVariableName});
-                        {actualLengthVariableName} += current;"
+                        $@"{spanVariableName} = {spanVariableName}[$""{{""\""{valueVariableName}\""""}}"".AsSpan().CopiedTo({spanVariableName})..];"
                     );
                 }
                 else
                 {
                     code.AppendLine(
-                        $@"current = {valueVariableName}.ToString().AsSpan().CopiedTo({spanVariableName});
-                        {actualLengthVariableName} += current;"
+                        $@"{spanVariableName} = {spanVariableName}[{valueVariableName}.ToString().AsSpan().CopiedTo({spanVariableName})..];"
                     );
                 }
             }
             else
             {
                 code.AppendLine($"{spanVariableName}[0] = '{{';");
+                code.AppendLine($"bool isFirst = true;");
                 code.AppendLine($"{spanVariableName} = {spanVariableName}[1..];");
                 var serializedProperties = GetSerializableProperties(type).ToArray();
                 for (int i = 0; i < serializedProperties.Length; i++)
                 {
-                    var isLast = i == serializedProperties.Length - 1;
-                    var isFirst = i == 0;
                     var property = serializedProperties[i];
                     var propertyType = property.Type;
                     bool isPrimitive = propertyType.IsPrimitive();
                     var propertyName = property.Name;
-                    var jsonLength = $"{propertyName}JsonLength";
 
                     var checkNull = propertyType.IsReferenceType;
                     var checkDefault = isPrimitive && !checkNull;
@@ -81,42 +113,29 @@ namespace CJason
                         }
                     }
 
+                    code.AppendLine($@"if (isFirst)
+{{
+    isFirst = false;
+}}
+else 
+{{
+    {spanVariableName}[0] = ',';
+    {spanVariableName} = {spanVariableName}[1..];
+}}");
+
                     code.AppendLine(
                         $"\"{appendedPropertyName}\".AsSpan().CopyTo({spanVariableName});"
                     );
-                    code.AppendLine($"{actualLengthVariableName} += {appendedPropertyNameLength};");
+
                     code.AppendLine(
                         $"{spanVariableName} = {spanVariableName}[{appendedPropertyNameLength}..];"
                     );
 
-                    if (isPrimitive)
-                    {
-                        if (propertyType.ValueIsInQuotes())
-                        {
-                            code.AppendLine(
-                                $@"current = $""\""{{{valueVariableName}.{propertyName}}}\"""".AsSpan().CopiedTo({spanVariableName});"
-                            );
-                        }
-                        else
-                        {
-                            code.AppendLine(
-                                $@"current = {valueVariableName}.{propertyName}.ToString().AsSpan().CopiedTo({spanVariableName});"
-                            );
-                        }
-                    }
-                    else
-                    {
-                        code.AppendLine(
-                            $@"{valueVariableName}.{propertyName}.{SerializeToMethodName}({spanVariableName}, out current);"
-                        );
-                    }
-                    if (!isLast)
-                    {
-                        code.AppendLine($"{spanVariableName}[current] = ',';");
-                        code.AppendLine($"current++;");
-                    }
-                    code.AppendLine($"{spanVariableName} = {spanVariableName}[current..];");
-                    code.AppendLine($"{actualLengthVariableName} += current;");
+                    var propertyVariable = $"{valueVariableName}_{propertyName}";
+                    code.AppendLine($@"
+var {propertyVariable} = {valueVariableName}.{propertyName};
+{spanVariableName} = {propertyType.PickFillingMethod(propertyVariable, spanVariableName)};
+");
 
                     if (checkDefault || checkNull)
                     {
@@ -127,95 +146,122 @@ namespace CJason
                 code.AppendLine($"{spanVariableName}[0] = '}}';");
             }
 
+            code.AppendLine($"{spanVariableName} = {spanVariableName}[1..];");
+
             return code.ToString();
+        }
+
+        static string PickFillingMethod(this ITypeSymbol variableType, string variable, string spanVariable)
+        {
+            bool isPrimitive = variableType.IsPrimitive();
+            if (isPrimitive)
+            {
+                if (variableType.ValueIsInQuotes())
+                {
+                    return $"{spanVariable}.FillWithQuoted({variable}.ToString())";
+                }
+                else
+                {
+                    return $"{spanVariable}.FillWith({variable}.ToString())";
+                }
+            }
+            else if (variableType.IsKeyValuePairs(out var key, out var value))
+            {
+                string keyVariable = $"{variable}_key";
+                string valueVariable = $"{variable}_value";
+                string jsonPieceVariable = $"{spanVariable}_dictionarySpan";
+
+                return $@"{spanVariable}.{FillWithMethodName}({variable}, 
+    (Span<char> {jsonPieceVariable}, {key.ToDisplayString()} {keyVariable}) => {key.PickFillingMethod(keyVariable, jsonPieceVariable)},
+    (Span<char> {jsonPieceVariable}, {value.ToDisplayString()} {valueVariable}) => {value.PickFillingMethod(valueVariable, jsonPieceVariable)})";
+
+            }
+            else if (variableType.IsEnumerable(out var underEnumerable))
+            {
+                string itemVariable = $"{variable}_item";
+                string jsonPieceVariable = $"{spanVariable}_arraySpan";
+                return $@"{spanVariable}.FillWith({variable}.EnsureSpan(), 
+(Span<char> {jsonPieceVariable}, {underEnumerable.ToDisplayString()} {itemVariable}) => {underEnumerable.PickFillingMethod(itemVariable, jsonPieceVariable)})";
+            }
+            else 
+            {
+                return $"{spanVariable}.{FillWithMethodName}({variable})";
+            }
         }
 
         public static string GenerateSerializationMethodsEtc(
             ITypeSymbol type,
             string valueVariableName = "item",
-            string spanVariableName = "span",
-            string actualLengthVariableName = "actualLength"
+            string spanVariableName = "span"
         )
         {
             string typeString = type.ToDisplayString();
+
             var code =
                 $@"
-{JsonLengthCalculationsGenerator.RenderTypeLengthStruct(type)}
-
 {JsonLengthCalculationsGenerator.RenderCalculateJsonLengthMethod(type)}
 
-static int {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}(this Span<{typeString}> items)
-{{
-    var result = 2;
-    var l = items.Length;
-    for (int i = 0; i < l; i++)
-    {{
-        var item = items[i];
-        result += {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}(item);
-    }}
-    result += l - 1;
-    return result;
-}}
-
-static int {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}(this IEnumerable<{typeString}> items)
-    => items.EnsureSpan().{JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}();
-
-public static void {SerializeToMethodName}(
-        this {typeString} {valueVariableName},
-        Span<char> {spanVariableName},
-        out int {actualLengthVariableName} 
+public static Span<char> {FillWithMethodName}(
+        this Span<char> {spanVariableName},
+        {typeString} {valueVariableName}
     )
 {{
-    {PutSerializationToSpan(type, null, valueVariableName, spanVariableName, actualLengthVariableName)} 
+    {PutSerializationToSpan(type, null, valueVariableName, spanVariableName)};
+    return {spanVariableName};
 }}
+
 
 public static string {SerializeMethodName}(this {typeString} {valueVariableName})
 {{
     var length = {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}({valueVariableName});
     Span<char> resultSpan = stackalloc char[length];
-    {valueVariableName}.{SerializeToMethodName}(resultSpan, out int actualLength);
-    resultSpan = resultSpan[..actualLength];
+    resultSpan.{FillWithMethodName}({valueVariableName});
     var result = new string(resultSpan);
     return result;
 }}
 
-public static void {SerializeToMethodName}(
-        this Span<{typeString}> items,
-        Span<char> targetSpan,
-        out int jsonLength
-    )
+
+/*
+public static Span<char> {FillWithMethodName}(this Span<char> span,
+    IEnumerable<KeyValuePair<string, {typeString}>> keyValues)
 {{
-    jsonLength = 1;
-    targetSpan[0] = '[';
-    targetSpan = targetSpan[1..];
-    var l = items.Length;
-    for (int i = 0; i < l; i++)
+    span[0] = '{{';
+    span = span[1..];
+    bool isFirst = true;
+    foreach (var (key, value) in keyValues)
     {{
-        var item = items[i];
-        item.{SerializeToMethodName}(targetSpan, out var itemLength);
-        if (i < l - 1)
+        if (!isFirst)
         {{
-            targetSpan[itemLength] = ',';
-            itemLength++;
+            span[0] = ',';
+            span = span[1..];
         }}
-        jsonLength += itemLength;
-        targetSpan = targetSpan[itemLength..];        
+        else 
+        {{
+            isFirst = false;
+        }}
+        var spanKey = key.AsSpan();
+        span[0] = '""';
+        span = span[1..];
+        spanKey.CopyTo(span);
+        span = span[spanKey.Length..];
+        span[0] = '""';
+        span[1] = ':';
+        span = span[2..];
+        span = span.{FillWithMethodName}(value);
     }}
-    targetSpan[0] = ']';
-    jsonLength++;
+    span[0] = '}}';
+    return span[1..];
 }}
 
-public static void {SerializeToMethodName}(this IEnumerable<{typeString}> source, Span<char> targetSpan, out int jsonLength)
-    => source.EnsureSpan().{SerializeToMethodName}(targetSpan, out jsonLength);
+public static Span<char> {FillWithMethodName}(this Span<char> targetSpan, IEnumerable<{typeString}> source)
+    => targetSpan.{FillWithMethodName}(source.EnsureSpan());
 
 public static string {SerializeMethodName}(this Span<{typeString}> items)
 {{
     var jsonLength = {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}(items);
     Span<char> spanResult = stackalloc char[jsonLength];
 
-    items.{SerializeToMethodName}(spanResult, out var actualLength);
-
-    spanResult = spanResult[..actualLength];
+    spanResult.{FillWithMethodName}(items);
 
     var result = new string(spanResult);
 
@@ -224,6 +270,8 @@ public static string {SerializeMethodName}(this Span<{typeString}> items)
 
 public static string {SerializeMethodName}(this IEnumerable<{typeString}> source)
     => source.EnsureSpan().{SerializeMethodName}();
+
+*/
 ";
 
             return code;

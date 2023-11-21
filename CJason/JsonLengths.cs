@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -39,7 +40,11 @@ namespace CJason
             { nameof(JsonLengths.UInt64), JsonLengths.UInt64 },
             { nameof(JsonLengths.Single), JsonLengths.Single },
             { nameof(JsonLengths.Double), JsonLengths.Double },
-            { nameof(JsonLengths.Decimal), JsonLengths.Decimal }
+            { nameof(JsonLengths.Decimal), JsonLengths.Decimal },
+
+            { nameof(System.DateTime), 30 },
+            { nameof(TimeSpan), 15 },
+            { nameof(DateTimeOffset), 36 }
         };
 
         static readonly SymbolDisplayFormat OnlyTypeName = new SymbolDisplayFormat(
@@ -64,7 +69,7 @@ namespace CJason
             $@"
 public static class JsonLengthExtensions
 {{    
-    {AsDictionary.Select(kv => $"public static int CalculateJsonLength(this System.{kv.Key} _) => {kv.Value};") .Join("\n")}
+    {AsDictionary.Select(kv => $"public static int CalculateJsonLength(this System.{kv.Key} _) => {kv.Value};").Join("\n")}
 
     {AsDictionary.Select(kv => $"public static int CalculateJsonLength(this System.Span<System.{kv.Key}> numbers) => (items.Length + 1) * {kv.Value} - 1;").Join("\n")}
 
