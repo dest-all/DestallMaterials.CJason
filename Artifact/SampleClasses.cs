@@ -23,6 +23,10 @@ namespace SampleNamespace
 
         public Char Symbol { get; set; }
 
+        public DateTime? CanBeNull { get; set; }
+
+        public DateTime? AlsoNullable { get; set; }
+
         public override bool Equals(object? obj) 
             => Equals(obj as Father);
 

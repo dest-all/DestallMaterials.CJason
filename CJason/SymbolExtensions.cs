@@ -122,5 +122,14 @@ namespace CJason
 
             return true;
         }
+
+        public static ITypeSymbol UnderNullable(this ITypeSymbol typeSymbol)
+        {
+            if (typeSymbol is INamedTypeSymbol nts && typeSymbol.NullableAnnotation == NullableAnnotation.Annotated)
+            {
+                return nts.TypeArguments.Single();
+            }
+            return typeSymbol;
+        }
     }
 }

@@ -91,7 +91,7 @@ namespace CJason
                     bool isPrimitive = propertyType.IsPrimitive();
                     var propertyName = property.Name;
 
-                    var checkNull = propertyType.IsReferenceType;
+                    var checkNull = propertyType.IsReferenceType || propertyType.NullableAnnotation == NullableAnnotation.Annotated;
                     var checkDefault = isPrimitive && !checkNull;
 
                     string appendedPropertyName = $"\\\"{(ss.LowerPropertyCase ? propertyName.LowerFirstLetter() : propertyName)}\\\":";
@@ -153,6 +153,8 @@ var {propertyVariable} = {valueVariableName}.{propertyName};
 
         static string PickFillingMethod(this ITypeSymbol variableType, string variable, string spanVariable)
         {
+            variableType = variableType.UnderNullable();
+
             bool isPrimitive = variableType.IsPrimitive();
             if (isPrimitive)
             {

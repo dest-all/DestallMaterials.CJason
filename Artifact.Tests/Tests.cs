@@ -8,7 +8,7 @@ namespace Artifact.Tests
     {
         static T[] ToArray<T>(T item) => new T[1] { item };
 
-        static Father SampleFather = new Father
+        static Father BigFather = new Father
         {
             Name = "Alex",
             Age = 51,
@@ -75,7 +75,7 @@ namespace Artifact.Tests
         [Test]
         public void TestJsonSerialization_ChildObject()
         {
-            var child = SampleFather.Children[0];
+            var child = BigFather.Children[0];
 
             var childJson = child.Serialize().AsSpan();
 
@@ -102,7 +102,7 @@ namespace Artifact.Tests
         [Test]
         public void TestJsonDeserialization_Full()
         {
-            var father = SampleFather;
+            var father = BigFather;
 
             var fatherJson = father.Serialize();
 
@@ -110,20 +110,34 @@ namespace Artifact.Tests
 
             ArtificialStringifier.RemoveObject(json, out father);
 
-            Assert.AreEqual(SampleFather.Age, father.Age);
-            Assert.AreEqual(SampleFather.Name, father.Name);
+            Assert.AreEqual(BigFather.Age, father.Age);
+            Assert.AreEqual(BigFather.Name, father.Name);
 
-            Assert.AreEqual(SampleFather.Priorities.Count, father.Priorities.Count);
-            Assert.AreEqual(SampleFather.Complaints.Length, father.Complaints.Length);
-            Assert.AreEqual(SampleFather.Children.Length, father.Children.Length);
+            Assert.AreEqual(BigFather.Priorities.Count, father.Priorities.Count);
+            Assert.AreEqual(BigFather.Complaints.Length, father.Complaints.Length);
+            Assert.AreEqual(BigFather.Children.Length, father.Children.Length);
 
-            Assert.AreEqual(SampleFather.Delays, father.Delays);
-            Assert.AreEqual(SampleFather.Symbol, father.Symbol);
-            Assert.AreEqual(SampleFather.Times.Count, father.Times.Count);
+            Assert.AreEqual(BigFather.Delays, father.Delays);
+            Assert.AreEqual(BigFather.Symbol, father.Symbol);
+            Assert.AreEqual(BigFather.Times.Count, father.Times.Count);
         }
 
-        static void AssertRightSerialization()
+        [Test]
+        public void TestEmptyAndNullableFields_Serialization()
         {
+            var father = new Father
+            {
+                Children = Array.Empty<Child>(),
+                AlsoNullable = DateTime.Today
+            };
+
+            var json = father.Serialize();
+
+            json.AsSpan().RemoveObject(out Father fatherDeserialized);
+
+            Assert.AreEqual(father.Children.Length, fatherDeserialized.Children.Length);
+            Assert.AreEqual(father.AlsoNullable, fatherDeserialized.AlsoNullable);
+            Assert.AreEqual(father.CanBeNull, fatherDeserialized.CanBeNull);
         }
     }
 }

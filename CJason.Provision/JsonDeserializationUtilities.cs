@@ -410,4 +410,19 @@ public static class JsonDeserializationUtilities
         jsonPiece = jsonPiece.RemoveQuotedValue(chars => new string(chars), out str);
         return jsonPiece;
     }
+
+    public static bool TryReadNull<T>(this JsonPiece jsonPiece, out T result)
+    {
+        var l = jsonPiece.Length;
+        result = default;
+        if (l > 3 && jsonPiece[0] == 'n' && jsonPiece[1] == 'u' && jsonPiece[2] == 'l' && jsonPiece[3] == 'l')
+        {
+            var nextSymbol = jsonPiece[4];
+            if (l == 4 || nextSymbol.IsClosingCharacter() || nextSymbol.IsEmptyCharacter())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }

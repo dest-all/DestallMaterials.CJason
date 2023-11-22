@@ -11,6 +11,8 @@ namespace CJason
 
         public static int GetConstantLength(ITypeSymbol type)
         {
+            type = type.UnderNullable();
+
             if (type.IsPrimitive())
             {
                 var constLength = type.GetConstantLength();
@@ -121,14 +123,15 @@ ref struct {structName}
                 var constantLength = p.Item2;
                 var lengthVar = $"item_{property.Name}_Length";
                 string lengthVarAssignment;
+                bool canBeNull = p.p.Type.IsReferenceType;
                 if (constantLength < 1)
                 {
                     lengthVarAssignment = $"var item_{property.Name} = item.{property.Name};\n" +
-                    $"var {lengthVar} = {property.Name.Length + 3} + {property.Type.CalculateJsonLengthExpression($"item_{property.Name}")};";
+                    $"var {lengthVar} = {(canBeNull ? $"item_{property.Name} is null ? 0 : " : "")} ({property.Name.Length + 3} + {property.Type.CalculateJsonLengthExpression($"item_{property.Name}")});";
                 }
                 else 
                 {
-                    lengthVarAssignment = $"const int {lengthVar} = {property.Name.Length + 3} + {constantLength};";
+                    lengthVarAssignment = $"int {lengthVar} = item.{property.Name} == default ? 0 : ({property.Name.Length + 3} + {constantLength});";
                 }
 
                 return (lengthVar, lengthVarAssignment);
