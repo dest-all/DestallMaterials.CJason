@@ -128,16 +128,33 @@ namespace Artifact.Tests
             var father = new Father
             {
                 Children = Array.Empty<Child>(),
-                AlsoNullable = DateTime.Today
+                AlsoNullable = DateTime.Today,
+                Name = "\' \" \t dsfds \\"
             };
 
             var json = father.Serialize();
 
-            json.AsSpan().RemoveObject(out Father fatherDeserialized);
+            var jsonRemainder = json.AsSpan().RemoveObject(out Father fatherDeserialized);
 
             Assert.AreEqual(father.Children.Length, fatherDeserialized.Children.Length);
             Assert.AreEqual(father.AlsoNullable, fatherDeserialized.AlsoNullable);
             Assert.AreEqual(father.CanBeNull, fatherDeserialized.CanBeNull);
+            Assert.AreEqual(father.Name, fatherDeserialized.Name);
+            Assert.AreEqual(0, jsonRemainder.Length);
+        }
+
+        [Test]
+        public void EscapedString_FillQuoted()
+        {
+            const string escaped = "\' \" \t dsfds \\";
+
+            Span<Char> buffer = stackalloc char[100];
+
+            buffer.FillWithQuoted(escaped);
+
+            ((ReadOnlySpan<char>)buffer).RemoveString(out var deserialized);
+
+            Assert.AreEqual(escaped, deserialized);
         }
     }
 }

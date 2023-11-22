@@ -217,8 +217,8 @@ public static string {SerializeMethodName}(this {typeString} {valueVariableName}
 {{
     var length = {JsonLengthCalculationsGenerator.CalculateJsonLengthMethodName}({valueVariableName});
     Span<char> resultSpan = stackalloc char[length];
-    resultSpan.{FillWithMethodName}({valueVariableName});
-    var result = new string(resultSpan);
+    var jsonLength = length - resultSpan.{FillWithMethodName}({valueVariableName}).Length;
+    var result = new string(resultSpan[..jsonLength]);
     return result;
 }}
 

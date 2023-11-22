@@ -123,7 +123,7 @@ public static class JsonSerializationUtilities
             if (c == '"' || c == '\\')
             {
                 json[lot] = '\\';
-                json[lot] = c;
+                json[lot + 1] = c;
                 dev++;
             }
             else 

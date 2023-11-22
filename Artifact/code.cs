@@ -1475,8 +1475,8 @@ namespace SampleNamespace
         {
             var length = CalculateJsonLength(item);
             Span<char> resultSpan = stackalloc char[length];
-            resultSpan.FillWith(item);
-            var result = new string(resultSpan);
+            var jsonLength = length - resultSpan.FillWith(item).Length;
+            var result = new string(resultSpan[..jsonLength]);
             return result;
         }
 
@@ -1651,8 +1651,8 @@ namespace SampleNamespace
         {
             var length = CalculateJsonLength(item);
             Span<char> resultSpan = stackalloc char[length];
-            resultSpan.FillWith(item);
-            var result = new string(resultSpan);
+            var jsonLength = length - resultSpan.FillWith(item).Length;
+            var result = new string(resultSpan[..jsonLength]);
             return result;
         }
 
