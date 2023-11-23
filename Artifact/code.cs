@@ -1236,7 +1236,7 @@ namespace SampleNamespace
 
 
 
-        static int CalculateJsonLength(this SampleNamespace.Father item)
+        public static int CalculateJsonLength(this SampleNamespace.Father item)
         {
             var item_Name = item.Name;
             var item_Name_Length = item_Name is null ? 0 : (7 + item_Name.Length * 2 + 2);
@@ -1280,7 +1280,7 @@ namespace SampleNamespace
                 span = span[7..];
 
                 var item_Name = item.Name;
-                span = span.FillWithQuoted(item_Name.ToString());
+                span = span.FillWithQuoted(item_Name);
 
             }
             if (item.Age != default)
@@ -1298,7 +1298,7 @@ namespace SampleNamespace
                 span = span[6..];
 
                 var item_Age = item.Age;
-                span = span.FillWith(item_Age.ToString());
+                span = span.FillWith(item_Age);
 
             }
             if (item.Children is not null)
@@ -1340,9 +1340,9 @@ namespace SampleNamespace
                 (Span<char> span_arraySpan_arraySpan, System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][] item_Complaints_item_item) => span_arraySpan_arraySpan.FillWith(item_Complaints_item_item.EnsureSpan(),
                 (Span<char> span_arraySpan_arraySpan_arraySpan, System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[] item_Complaints_item_item_item) => span_arraySpan_arraySpan_arraySpan.FillWith(item_Complaints_item_item_item.EnsureSpan(),
                 (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan, System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> item_Complaints_item_item_item_item) => span_arraySpan_arraySpan_arraySpan_arraySpan.FillWith(item_Complaints_item_item_item_item,
-                    (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan, string item_Complaints_item_item_item_item_key) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan.FillWithQuoted(item_Complaints_item_item_item_item_key.ToString()),
+                    (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan, string item_Complaints_item_item_item_item_key) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan.FillWithQuoted(item_Complaints_item_item_item_item_key),
                     (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> item_Complaints_item_item_item_item_value) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan.FillWith(item_Complaints_item_item_item_item_value,
-                    (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan, string item_Complaints_item_item_item_item_value_key) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan.FillWithQuoted(item_Complaints_item_item_item_item_value_key.ToString()),
+                    (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan, string item_Complaints_item_item_item_item_value_key) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan.FillWithQuoted(item_Complaints_item_item_item_item_value_key),
                     (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan, SampleNamespace.Child[] item_Complaints_item_item_item_item_value_value) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan.FillWith(item_Complaints_item_item_item_item_value_value.EnsureSpan(),
                 (Span<char> span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan_arraySpan, SampleNamespace.Child item_Complaints_item_item_item_item_value_value_item) => span_arraySpan_arraySpan_arraySpan_arraySpan_dictionarySpan_dictionarySpan_arraySpan.FillWith(item_Complaints_item_item_item_item_value_value_item))))))));
 
@@ -1363,11 +1363,11 @@ namespace SampleNamespace
 
                 var item_Priorities = item.Priorities;
                 span = span.FillWith(item_Priorities,
-                    (Span<char> span_dictionarySpan, string item_Priorities_key) => span_dictionarySpan.FillWithQuoted(item_Priorities_key.ToString()),
+                    (Span<char> span_dictionarySpan, string item_Priorities_key) => span_dictionarySpan.FillWithQuoted(item_Priorities_key),
                     (Span<char> span_dictionarySpan, System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> item_Priorities_value) => span_dictionarySpan.FillWith(item_Priorities_value,
-                    (Span<char> span_dictionarySpan_dictionarySpan, string item_Priorities_value_key) => span_dictionarySpan_dictionarySpan.FillWithQuoted(item_Priorities_value_key.ToString()),
+                    (Span<char> span_dictionarySpan_dictionarySpan, string item_Priorities_value_key) => span_dictionarySpan_dictionarySpan.FillWithQuoted(item_Priorities_value_key),
                     (Span<char> span_dictionarySpan_dictionarySpan, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> item_Priorities_value_value) => span_dictionarySpan_dictionarySpan.FillWith(item_Priorities_value_value,
-                    (Span<char> span_dictionarySpan_dictionarySpan_dictionarySpan, string item_Priorities_value_value_key) => span_dictionarySpan_dictionarySpan_dictionarySpan.FillWithQuoted(item_Priorities_value_value_key.ToString()),
+                    (Span<char> span_dictionarySpan_dictionarySpan_dictionarySpan, string item_Priorities_value_value_key) => span_dictionarySpan_dictionarySpan_dictionarySpan.FillWithQuoted(item_Priorities_value_value_key),
                     (Span<char> span_dictionarySpan_dictionarySpan_dictionarySpan, SampleNamespace.Child[] item_Priorities_value_value_value) => span_dictionarySpan_dictionarySpan_dictionarySpan.FillWith(item_Priorities_value_value_value.EnsureSpan(),
                 (Span<char> span_dictionarySpan_dictionarySpan_dictionarySpan_arraySpan, SampleNamespace.Child item_Priorities_value_value_value_item) => span_dictionarySpan_dictionarySpan_dictionarySpan_arraySpan.FillWith(item_Priorities_value_value_value_item)))));
 
@@ -1388,8 +1388,8 @@ namespace SampleNamespace
 
                 var item_Times = item.Times;
                 span = span.FillWith(item_Times,
-                    (Span<char> span_dictionarySpan, System.DateTime item_Times_key) => span_dictionarySpan.FillWithQuoted(item_Times_key.ToString()),
-                    (Span<char> span_dictionarySpan, System.TimeSpan item_Times_value) => span_dictionarySpan.FillWithQuoted(item_Times_value.ToString()));
+                    (Span<char> span_dictionarySpan, System.DateTime item_Times_key) => span_dictionarySpan.FillWithQuoted(item_Times_key),
+                    (Span<char> span_dictionarySpan, System.TimeSpan item_Times_value) => span_dictionarySpan.FillWithQuoted(item_Times_value));
 
             }
             if (item.Delays != default)
@@ -1407,7 +1407,7 @@ namespace SampleNamespace
                 span = span[9..];
 
                 var item_Delays = item.Delays;
-                span = span.FillWithQuoted(item_Delays.ToString());
+                span = span.FillWithQuoted(item_Delays);
 
             }
             if (item.Symbol != default)
@@ -1425,7 +1425,7 @@ namespace SampleNamespace
                 span = span[9..];
 
                 var item_Symbol = item.Symbol;
-                span = span.FillWithQuoted(item_Symbol.ToString());
+                span = span.FillWithQuoted(item_Symbol);
 
             }
             if (item.CanBeNull is not null)
@@ -1443,7 +1443,7 @@ namespace SampleNamespace
                 span = span[12..];
 
                 var item_CanBeNull = item.CanBeNull;
-                span = span.FillWithQuoted(item_CanBeNull.ToString());
+                span = span.FillWithQuoted(item_CanBeNull.Value);
 
             }
             if (item.AlsoNullable is not null)
@@ -1461,7 +1461,7 @@ namespace SampleNamespace
                 span = span[15..];
 
                 var item_AlsoNullable = item.AlsoNullable;
-                span = span.FillWithQuoted(item_AlsoNullable.ToString());
+                span = span.FillWithQuoted(item_AlsoNullable.Value);
 
             }
             span[0] = '}';
@@ -1587,7 +1587,7 @@ namespace SampleNamespace
 
 
 
-        static int CalculateJsonLength(this SampleNamespace.Child item)
+        public static int CalculateJsonLength(this SampleNamespace.Child item)
         {
             int item_Age_Length = item.Age == default ? 0 : (6 + 11);
             var item_Name = item.Name;
@@ -1619,7 +1619,7 @@ namespace SampleNamespace
                 span = span[6..];
 
                 var item_Age = item.Age;
-                span = span.FillWith(item_Age.ToString());
+                span = span.FillWith(item_Age);
 
             }
             if (item.Name is not null)
@@ -1637,7 +1637,7 @@ namespace SampleNamespace
                 span = span[7..];
 
                 var item_Name = item.Name;
-                span = span.FillWithQuoted(item_Name.ToString());
+                span = span.FillWithQuoted(item_Name);
 
             }
             span[0] = '}';

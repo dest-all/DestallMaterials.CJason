@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Text.Json.Serialization;
 using JsonPiece = System.Span<char>;
 
 namespace CJason.Provision;
@@ -120,13 +121,14 @@ public static class JsonSerializationUtilities
         {
             var c = item[i];
             var lot = i + dev;
-            if (c == '"' || c == '\\')
+            var alt = EscapedAlternative(c);
+            if (alt != default)
             {
                 json[lot] = '\\';
-                json[lot + 1] = c;
+                json[lot + 1] = alt;
                 dev++;
             }
-            else 
+            else
             {
                 json[lot] = c;
             }
@@ -134,6 +136,57 @@ public static class JsonSerializationUtilities
         json[i + dev] = '"';
         return json[(i + dev + 1)..];
     }
+
+    public static JsonPiece FillWithQuoted(this JsonPiece json, char c)
+    {
+        json[0] = '"';
+        var alt = EscapedAlternative(c);
+        if (alt != default)
+        {
+            json[1] = '\\';
+            json[2] = alt;
+            json[3] = '"';
+            return json[4..];
+        }
+        json[1] = c;
+        json[2] = '"';
+        return json[3..];
+    }
+
+    public static JsonPiece FillWithQuoted(this JsonPiece json, DateTime dateTime)
+    {
+        json[0] = '"';
+        json = json[1..].FillWith(dateTime);
+        json[0] = '"';
+        return json[1..];
+    }
+
+    public static JsonPiece FillWithQuoted(this JsonPiece json, TimeSpan timeSpan)
+    {
+        json[0] = '"';
+        json = json[1..].FillWith(timeSpan);
+        json[0] = '"';
+        return json[1..];
+    }
+
+    public static JsonPiece FillWithQuoted(this JsonPiece json, DateTimeOffset dateTimeOffset)
+    {
+        json[0] = '"';
+        json = json[1..].FillWith(dateTimeOffset);
+        json[0] = '"';
+        return json[1..];
+    }
+
+    static char EscapedAlternative(char c)
+        => c switch
+        {
+            '"' => '"',
+            '\\' => '\\',
+            '\t' => 't',
+            '\r' => 'r',
+            '\n' => 'n',
+            _ => default
+        };
 
     public static JsonPiece FillWith(this JsonPiece jsonPiece, ReadOnlySpan<char> item)
         => jsonPiece[item.CopiedTo(jsonPiece)..];

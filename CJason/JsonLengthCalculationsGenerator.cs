@@ -111,7 +111,7 @@ ref struct {structName}
             var structName = TypeLengthStructName(type);
 
             var head =
-                $@"static int {CalculateJsonLengthMethodName}(this {type.ToDisplayString()} item)";
+                $@"public static int {CalculateJsonLengthMethodName}(this {type.ToDisplayString()} item)";
 
             var properties = SerializationGenerator
                 .GetSerializableProperties(type)

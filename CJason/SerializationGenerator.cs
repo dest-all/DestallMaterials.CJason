@@ -68,13 +68,13 @@ namespace CJason
                 if (type.ValueIsInQuotes())
                 {
                     code.AppendLine(
-                        $@"{spanVariableName} = {spanVariableName}[$""{{""\""{valueVariableName}\""""}}"".AsSpan().CopiedTo({spanVariableName})..];"
+                        $@"{spanVariableName} = {spanVariableName}.FillWithQuoted({valueVariableName});"
                     );
                 }
                 else
                 {
                     code.AppendLine(
-                        $@"{spanVariableName} = {spanVariableName}[{valueVariableName}.ToString().AsSpan().CopiedTo({spanVariableName})..];"
+                        $@"{spanVariableName} = {spanVariableName}.FillWith({valueVariableName});"
                     );
                 }
             }
@@ -153,18 +153,20 @@ var {propertyVariable} = {valueVariableName}.{propertyName};
 
         static string PickFillingMethod(this ITypeSymbol variableType, string variable, string spanVariable)
         {
+            bool isNullable = variableType.NullableAnnotation == NullableAnnotation.Annotated;
             variableType = variableType.UnderNullable();
 
             bool isPrimitive = variableType.IsPrimitive();
             if (isPrimitive)
             {
+                variable = isNullable ? $"{variable}.Value" : variable;
                 if (variableType.ValueIsInQuotes())
                 {
-                    return $"{spanVariable}.FillWithQuoted({variable}.ToString())";
+                    return $"{spanVariable}.FillWithQuoted({variable})";
                 }
                 else
                 {
-                    return $"{spanVariable}.FillWith({variable}.ToString())";
+                    return $"{spanVariable}.FillWith({variable})";
                 }
             }
             else if (variableType.IsKeyValuePairs(out var key, out var value))

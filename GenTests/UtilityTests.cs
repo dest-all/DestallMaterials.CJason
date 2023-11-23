@@ -1,6 +1,5 @@
 ﻿using CJason.Provision;
-using System.Runtime.InteropServices;
-using System.Text.Json;
+using Newtonsoft.Json;
 using JsonPiece = System.ReadOnlySpan<char>;
 
 namespace GenTests;
@@ -20,8 +19,29 @@ public class UtilityTests
     }
 
     [Test]
+    public void Serialize_EscapedString()
+    {
+        const string shouldBeEscaped = "\" \t \n \r \\";
+
+        var ser1 = System.Text.Json.JsonSerializer.Serialize(shouldBeEscaped);
+        var ser2 = JsonConvert.SerializeObject(shouldBeEscaped);
+
+        Span<char> span = stackalloc char[100];
+        span.FillWithQuoted(shouldBeEscaped);
+        var ser3 = new string(new string(span).TakeWhile(c => c != '\0').ToArray());
+
+        var des1 = System.Text.Json.JsonSerializer.Deserialize<string>(ser1);
+        var des2 = System.Text.Json.JsonSerializer.Deserialize<string>(ser2);
+        var des3 = System.Text.Json.JsonSerializer.Deserialize<string>(ser3);
+
+        Assert.AreEqual(des1, des2);
+        Assert.AreEqual(des2, des3);
+    }
+
+    [Test]
     public void DeserializeValue_String_0()
     {
+
         JsonPiece input = @" : "" \"" \"" trtret \\\"" \""""    ,  ";
 
         input.SkipToPropertyValue().RemoveQuotedValue(chars => new string(chars), out var readValue);
@@ -58,32 +78,6 @@ public class UtilityTests
     }
 
     [Test]
-    public void Deserialize_NumberArray()
-    {
-        var (n1, n2, n3, n4, n5) = (1000, 400, 5, 18923, 343434);
-
-        JsonPiece json = $" :  [ {n1}, \t\n {n2} \n, \n {n3}, {n4}, {n5} ]";
-
-        json.SkipToPropertyValue().RemoveArray<int>(JsonDeserializationUtilities.RemoveNumber<int>, out var ints);
-
-        Assert.Contains(n1, ints);
-        Assert.Contains(n2, ints);
-        Assert.Contains(n3, ints);
-        Assert.Contains(n4, ints);
-        Assert.Contains(n5, ints);
-    }
-
-    [Test]
-    public void Deserialize_NumberArray_2()
-    {
-        JsonPiece numbersArrayString = $"[1,1500]";
-
-        numbersArrayString.RemoveArray<int>(JsonDeserializationUtilities.RemoveNumber<int>, out var numbers);
-
-
-    }
-
-    [Test]
     public void Deserialize_StringArray()
     {
         var (s1, s2, s3, s4, s5) = ("34543543", "dfgdfgfd", "fdgfdgf", "-0-0-", "2324");
@@ -115,7 +109,7 @@ public class UtilityTests
             .SkipInsignificantSymbolsLeft()
             .RemovePropertyName(out propertyDeserialized)
             .SkipToPropertyValue()
-            .RemoveNumber(out valueDeserialized);
+            .RemovePrimitiveValue(j => int.Parse(j), out valueDeserialized);
 
         Assert.That(new string(propertyDeserialized), Is.EqualTo(property));
         Assert.That(valueDeserialized, Is.EqualTo(value));
@@ -124,7 +118,7 @@ public class UtilityTests
     [Test]
     public void Deserialize_SeveralProperties()
     {
-        var (p1, v1, p2, v2, p3, v3) = 
+        var (p1, v1, p2, v2, p3, v3) =
             ("Name", "Igor", "Age", 26, "BirthDate", new DateTime(1996, 12, 06));
 
         JsonPiece json = $@"{{
@@ -146,7 +140,7 @@ public class UtilityTests
             .SkipToPropertyName()
             .RemovePropertyName(out dp2)
             .SkipToPropertyValue()
-            .RemoveNumber(out dv2)
+            .RemovePrimitiveValue(j => int.Parse(j), out dv2)
             .SkipToPropertyName()
             .RemovePropertyName(out dp3)
             .SkipToPropertyValue()
@@ -185,7 +179,7 @@ public class UtilityTests
     {
         var obj = new { Name = "Bob } ,, }", Surname = "Terminator" };
 
-        var jsonObj = JsonSerializer.Serialize(obj);
+        var jsonObj = System.Text.Json.JsonSerializer.Serialize(obj);
 
         JsonPiece json = $"{jsonObj}-";
 
@@ -217,5 +211,78 @@ public class UtilityTests
         };
 
         Assert.AreEqual(1, index);
+    }
+
+    [Test]
+    public void DeserializeEscapedString()
+    {
+        const string shouldBeEscaped = "\" \t \n \r \\";
+
+        Span<char> span = stackalloc char[100];
+        span.FillWithQuoted(shouldBeEscaped);
+        var ser = new string(new string(span).TakeWhile(c => c != '\0').ToArray());
+
+        var serStandard = JsonConvert.SerializeObject(shouldBeEscaped);
+
+        var desStandard = JsonConvert.DeserializeObject<string>(new(ser));
+        ser.AsSpan().RemoveQuotedValue(j => new string(j), out string des);
+
+        Assert.AreEqual(shouldBeEscaped, desStandard);
+        Assert.AreEqual(desStandard, des);
+        Assert.AreEqual(serStandard, ser);
+    }
+
+
+    [Test]
+    public void Deserialize_Char()
+    {
+        const char c = '\t';
+
+        Span<char> span = stackalloc char[9];
+        span.FillWithQuoted(c.ToString());
+
+        var json = new string(span).AsSpan();
+
+        json.RemoveQuotedValue(j => j[0], out char cDes);
+
+        var serStandard = JsonConvert.SerializeObject(c);
+
+        var cDesStandard = JsonConvert.DeserializeObject<Char>(new string(json));
+
+        Assert.AreEqual(c, cDes);
+        Assert.AreEqual(cDes, cDesStandard);
+    }
+
+    [Test]
+    public void String_ToString()
+    {
+        const string a = "34r3432432dsf";
+
+        var b = a.ToString();
+
+        Assert.IsTrue(object.ReferenceEquals(b, a));
+    }
+
+
+
+    [Test]
+    public void Number_Fill()
+    {
+        int[] numbers = [int.MinValue, int.MaxValue, 0, 324, 12, 34353454];
+
+        Span<char> span1Orig = stackalloc char[100];
+        string str2 = "";
+
+        var span1 = span1Orig;
+
+        foreach (var number in numbers)
+        {
+            span1 = span1.FillWith(number);
+            str2 += number.ToString();
+        }
+
+        var str1 = new string(new string(span1Orig).TakeWhile(c => c != '\0').ToArray());
+
+        Assert.AreEqual(str1, str2);
     }
 }
