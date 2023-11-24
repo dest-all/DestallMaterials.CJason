@@ -15,7 +15,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Artifact", "Artifact\Artifa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CJason.Provision", "CJason.Provision\CJason.Provision.csproj", "{1CBC8F0B-EE99-4364-A0ED-941341E0A053}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Artifact.Tests", "Artifact.Tests\Artifact.Tests.csproj", "{2D63D6F5-0132-49A3-A703-4AC618F233B6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Artifact.Tests", "Artifact.Tests\Artifact.Tests.csproj", "{2D63D6F5-0132-49A3-A703-4AC618F233B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Launches", "Launches\Launches.csproj", "{8C43B9C4-66B5-4160-ABE7-29E447FA6992}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,10 @@ Global
 		{2D63D6F5-0132-49A3-A703-4AC618F233B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2D63D6F5-0132-49A3-A703-4AC618F233B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2D63D6F5-0132-49A3-A703-4AC618F233B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8C43B9C4-66B5-4160-ABE7-29E447FA6992}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C43B9C4-66B5-4160-ABE7-29E447FA6992}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C43B9C4-66B5-4160-ABE7-29E447FA6992}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C43B9C4-66B5-4160-ABE7-29E447FA6992}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

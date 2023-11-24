@@ -229,4 +229,69 @@ public class TimeFillingTests
         TimeSpan parsedDefaultTimeSpan = TimeSpan.Parse(result);
         Assert.AreEqual(defaultTimeSpan, parsedDefaultTimeSpan);
     }
+
+    [Test]
+    public void TimeSpan_CustomTimeSpan()
+    {
+        TimeSpan timeSpan = new TimeSpan(10, 10, 10, 10);
+        Span<char> buffer = new char[16];
+        buffer.FillWith(timeSpan);
+        var result = buffer.ToStringUntilTerminator();
+
+        Assert.AreEqual(timeSpan.ToString(), result);
+
+        // Verify with Parse
+        TimeSpan parsedDefaultTimeSpan = TimeSpan.Parse(result);
+        Assert.AreEqual(timeSpan, parsedDefaultTimeSpan);
+    }
+}
+
+public class TimeDeserializationTests
+{
+    [Test]
+    public void RemoveDateTime()
+    {
+        Span<char> str = stackalloc char[50];
+
+        var dateTime = new DateTime(2023, 10, 10, 10, 10, 10);
+
+        str.FillWithQuoted(dateTime)[0] = '-';
+
+        var readonlyStr = (ReadOnlySpan<char>)str;
+
+        var rem = readonlyStr.Remove(out DateTime des);
+
+        Assert.AreEqual(dateTime, des);
+        Assert.AreEqual('-', rem[0]);
+    }
+
+    [Test]
+    public void RemoveTimeSpan()
+    {
+        TimeSpan[] timeSpans = [
+            new TimeSpan(10, 10, 10, 10), 
+            new(-10, 10, 10, 10), 
+            new(-10, -10, -10, -10), 
+            default, 
+            TimeSpan.MinValue, 
+            TimeSpan.MaxValue
+            ];
+
+        foreach (var time in timeSpans)
+        {
+            Span<char> str = stackalloc char[50];
+
+            str.FillWithQuoted(time)[0] = '-';
+
+            var readonlyStr = (ReadOnlySpan<char>)str;
+
+            var rem = readonlyStr.Remove(out TimeSpan des);
+
+            Assert.AreEqual((int)time.TotalSeconds, (int)des.TotalSeconds);
+            Assert.AreEqual('-', rem[0]);
+        }
+    }
+
+    static bool MatchToSeconds(TimeSpan first, TimeSpan second)
+        => first.TotalSeconds == second.TotalSeconds;
 }

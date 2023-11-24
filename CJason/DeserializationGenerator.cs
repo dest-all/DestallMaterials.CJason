@@ -81,10 +81,18 @@ while (i < propsCount)
         _ => -1
     }};
 
-    {json} = propertyIndex switch 
+    switch (propertyIndex)
     {{
-        {properties.Select((p, i) => $"{i} => {compilation.PickValueRemovalMethod(p.Type, p.PropertyTypeVariant, p.Name.LowerFirstLetter(), json)},").Join("\n")}
-        _ => {json}.SkipValue()
+        {properties.Select((p, i) => $@"case {i}: 
+{{ 
+    {compilation.RemoveValueCode(p.Type, p.PropertyTypeVariant, p.Name.LowerFirstLetter(), json)} 
+    break;
+}}").Join("\n")}
+        default:
+        {{
+            {json} = {json}.SkipValue();
+            break;
+        }}
     }};
 
     if (propertyIndex != -1)
@@ -108,7 +116,7 @@ return {json};
             return result;
         }
 
-        static string PickValueRemovalMethod(this Compilation compilation,
+        static string RemoveValueCode(this Compilation compilation,
             ITypeSymbol type,
             PropertyTypeVariant typeKind,
             string variableToAssignValueTo,
@@ -118,73 +126,117 @@ return {json};
             var isNullable = originalType.NullableAnnotation == NullableAnnotation.Annotated;
             type = type.UnderNullable();
 
-            string result = null;
+            string resultVariableOriginal = variableToAssignValueTo;
 
+            bool isNullableValueType = !type.IsReferenceType && isNullable;
+            if (isNullableValueType)
+            {
+                variableToAssignValueTo = $"{variableToAssignValueTo}_Value";
+            }
 
-            if (typeKind == PropertyTypeVariant.Number)
-            {
-                result = $"{jsonVariableName}.RemovePrimitiveValue<{originalType.ToDisplayString()}>(j => {type.ToDisplayString()}.Parse(j), out {variableToAssignValueTo})";
-            }
-            else
-            if (typeKind == PropertyTypeVariant.Boolean)
-            {
-                result = $"{jsonVariableName}.RemovePrimitiveValue<{originalType.ToDisplayString()}>(j => bool.Parse(j), out {variableToAssignValueTo})";
-            }
-            else
-            if (typeKind == PropertyTypeVariant.ParsableQuoted)
-            {
-                result = $"{jsonVariableName}.RemoveQuotedValue(j => {type.ToDisplayString()}.Parse(j), out {variableToAssignValueTo})";
-            }
-            else
-            if (typeKind == PropertyTypeVariant.Char)
-            {
-                result = $"{jsonVariableName}.RemoveQuotedValue(j => j[0], out {variableToAssignValueTo})";
-            }
-            else
-            if (typeKind == PropertyTypeVariant.Object)
-            {
-                result = $"{jsonVariableName}.RemoveObject(out {variableToAssignValueTo})";
-            }
-            else
-            if (typeKind == PropertyTypeVariant.String)
-            {
-                result = $"{jsonVariableName}.RemoveQuotedValue(j => new string(j), out {variableToAssignValueTo})";
-            }
-            else
+            string result;
+
             if (typeKind == PropertyTypeVariant.Array)
             {
                 type.IsEnumerable(out var underEnumerable);
                 var implementationType = compilation.PickValueImplementationType(underEnumerable);
-                string v = $"{variableToAssignValueTo}_i";
-                string j = $"{jsonVariableName}_j";
-                var deserializeItemMethod = compilation.PickValueRemovalMethod(implementationType.Item2, implementationType.Item1, v, j);
+                string v = $"{variableToAssignValueTo}_item";
+                string j = $"{jsonVariableName}";
+                var deserializeItemMethod = compilation.RemoveValueCode(implementationType.Item2, implementationType.Item1, v, j);
+
+                string vList = $"{v}_list";
 
                 var arrayOrList = type is INamedTypeSymbol ? "List" : "Array";
 
-                result = $"{jsonVariableName}.Remove{arrayOrList}((JsonPiece {j}, out {underEnumerable.ToDisplayString()} {v}) => {{ var r = {deserializeItemMethod}; return r; }}, out {variableToAssignValueTo})";
+                result = $@"
+{jsonVariableName} = {jsonVariableName}[1..];
+var {vList} = new List<{underEnumerable.ToDisplayString()}>();  
+while (true)
+{{
+    {jsonVariableName} = {jsonVariableName}.SkipInsignificantSymbolsLeft();
+    var {variableToAssignValueTo}_c = {jsonVariableName}[0];
+    if ({variableToAssignValueTo}_c == ']')
+    {{
+        {jsonVariableName} = {jsonVariableName}[1..];
+        break;
+    }}
+    else if ({variableToAssignValueTo}_c == ',')
+    {{
+        {jsonVariableName} = {jsonVariableName}[1..];
+    }}
+    
+    {underEnumerable.ToDisplayString()} {v};
+
+    {deserializeItemMethod}
+
+    {vList}.Add({v});
+}}
+{variableToAssignValueTo} = {vList}{(arrayOrList == "Array" ? ".ToArray()" : "")};
+";
             }
-            else
-            if (typeKind == PropertyTypeVariant.Dictionary)
+            else if (typeKind == PropertyTypeVariant.Dictionary)
             {
                 type.IsDictionary(out var keyType, out var valueType);
                 var keyImplementationType = compilation.PickValueImplementationType(keyType);
                 var valueImplementationType = compilation.PickValueImplementationType(valueType);
 
-                string v = $"{variableToAssignValueTo}_v";
-                string j = $"{jsonVariableName}_j";
+                string v = $"{variableToAssignValueTo}_value";
+                string k = $"{variableToAssignValueTo}_key";
+                string j = $"{jsonVariableName}";
 
-                var deserializeKeyMethod = compilation.PickValueRemovalMethod(keyImplementationType.Item2, keyImplementationType.Item1, v, j);
-                var deserializeValueMethod = compilation.PickValueRemovalMethod(valueImplementationType.Item2, valueImplementationType.Item1, v, j);
+                var deserializeKey = compilation.RemoveValueCode(keyImplementationType.Item2, keyImplementationType.Item1, k, j);
+                var deserializeValue = compilation.RemoveValueCode(valueImplementationType.Item2, valueImplementationType.Item1, v, j);
 
-                result = $@"{jsonVariableName}.RemoveDictionary( 
-(JsonPiece {j}, out {keyImplementationType.Item2.ToDisplayString()} {v}) => {{ var r = {deserializeKeyMethod}; return r; }},
-(JsonPiece {j}, out {valueImplementationType.Item2.ToDisplayString()} {v}) => {{ var r = {deserializeValueMethod}; return r; }}, 
-out {variableToAssignValueTo})";
+                result = $@"
+{jsonVariableName} = {jsonVariableName}.EnterObject();
+{variableToAssignValueTo} = new();
+while (true)
+{{
+    {jsonVariableName} = {jsonVariableName}.SkipInsignificantSymbolsLeft();
+    var {variableToAssignValueTo}_c = {jsonVariableName}[0];
+    if ({variableToAssignValueTo}_c == '}}')
+    {{
+        {jsonVariableName} = {jsonVariableName}[1..];
+        break;
+    }}
+    else if ({variableToAssignValueTo}_c == ',')
+    {{
+        json = json[1..];
+    }}
+    
+    {keyType.ToDisplayString()} {k};
+    {valueType.ToDisplayString()} {v};
+
+    {deserializeKey}
+
+    {jsonVariableName} = {jsonVariableName}.SkipToPropertyValue();
+
+    {deserializeValue}
+
+    {variableToAssignValueTo}.Add({k}, {v});
+}}";
+            }
+            else if (typeKind == PropertyTypeVariant.Object)
+            {
+                result = $"{jsonVariableName} = {jsonVariableName}.RemoveObject(out {variableToAssignValueTo});";
+            }
+            else
+            {
+                result = $"{jsonVariableName} = {jsonVariableName}.Remove(out {variableToAssignValueTo});";
             }
 
             if (originalType.IsReferenceType || isNullable)
             {
-                result = $"{jsonVariableName}.TryReadNull(out {variableToAssignValueTo}) ? {jsonVariableName}[4..] : {result}";
+                result = $@"
+if ({jsonVariableName}.TryReadNull(out {resultVariableOriginal})) 
+{{
+    {jsonVariableName} = {jsonVariableName}[4..];
+}}
+{{
+    {(isNullableValueType ? $"{type.ToDisplayString()} {variableToAssignValueTo}" : "")};
+    {result}
+    {(isNullableValueType ? $"{resultVariableOriginal} = {variableToAssignValueTo};" : "")}
+}}";
             }
 
             return result;

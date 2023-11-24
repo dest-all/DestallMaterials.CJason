@@ -1154,58 +1154,609 @@ namespace SampleNamespace
                     _ => -1
                 };
 
-                json = propertyIndex switch
+                switch (propertyIndex)
                 {
-                    0 => json.TryReadNull(out name) ? json[4..] : json.RemoveQuotedValue(j => new string(j), out name),
-                    1 => json.RemovePrimitiveValue<int>(j => int.Parse(j), out age),
-                    2 => json.TryReadNull(out children) ? json[4..] : json.RemoveArray((JsonPiece json_j, out SampleNamespace.Child children_i) => { var r = json_j.TryReadNull(out children_i) ? json_j[4..] : json_j.RemoveObject(out children_i); return r; }, out children),
-                    3 => json.TryReadNull(out complaints) ? json[4..] : json.RemoveArray((JsonPiece json_j, out System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][][] complaints_i) =>
+                    case 0:
                     {
-                        var r = json_j.TryReadNull(out complaints_i) ? json_j[4..] : json_j.RemoveArray((JsonPiece json_j_j, out System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][] complaints_i_i) =>
+
+                        if (json.TryReadNull(out name))
                         {
-                            var r = json_j_j.TryReadNull(out complaints_i_i) ? json_j_j[4..] : json_j_j.RemoveArray((JsonPiece json_j_j_j, out System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[] complaints_i_i_i) =>
+                            json = json[4..];
+                        }
+                        {
+                            ;
+                            json = json.Remove(out name);
+
+                        }
+                        break;
+                    }
+                    case 1:
+                    {
+                        json = json.Remove(out age);
+                        break;
+                    }
+                    case 2:
+                    {
+
+                        if (json.TryReadNull(out children))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            ;
+
+                            json = json[1..];
+                            var children_item_list = new List<SampleNamespace.Child>();
+                            while (true)
                             {
-                                var r = json_j_j_j.TryReadNull(out complaints_i_i_i) ? json_j_j_j[4..] : json_j_j_j.RemoveArray((JsonPiece json_j_j_j_j, out System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> complaints_i_i_i_i) =>
+                                json = json.SkipInsignificantSymbolsLeft();
+                                var children_c = json[0];
+                                if (children_c == ']')
                                 {
-                                    var r = json_j_j_j_j.TryReadNull(out complaints_i_i_i_i) ? json_j_j_j_j[4..] : json_j_j_j_j.RemoveDictionary(
-                    (JsonPiece json_j_j_j_j_j, out string complaints_i_i_i_i_v) => { var r = json_j_j_j_j_j.TryReadNull(out complaints_i_i_i_i_v) ? json_j_j_j_j_j[4..] : json_j_j_j_j_j.RemoveQuotedValue(j => new string(j), out complaints_i_i_i_i_v); return r; },
-                    (JsonPiece json_j_j_j_j_j, out System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> complaints_i_i_i_i_v) =>
+                                    json = json[1..];
+                                    break;
+                                }
+                                else if (children_c == ',')
+                                {
+                                    json = json[1..];
+                                }
+
+                                SampleNamespace.Child children_item;
+
+
+                                if (json.TryReadNull(out children_item))
+                                {
+                                    json = json[4..];
+                                }
+                                {
+                                    ;
+                                    json = json.RemoveObject(out children_item);
+
+                                }
+
+                                children_item_list.Add(children_item);
+                            }
+                            children = children_item_list.ToArray();
+
+
+                        }
+                        break;
+                    }
+                    case 3:
                     {
-                        var r = json_j_j_j_j_j.TryReadNull(out complaints_i_i_i_i_v) ? json_j_j_j_j_j[4..] : json_j_j_j_j_j.RemoveDictionary(
-                    (JsonPiece json_j_j_j_j_j_j, out string complaints_i_i_i_i_v_v) => { var r = json_j_j_j_j_j_j.TryReadNull(out complaints_i_i_i_i_v_v) ? json_j_j_j_j_j_j[4..] : json_j_j_j_j_j_j.RemoveQuotedValue(j => new string(j), out complaints_i_i_i_i_v_v); return r; },
-                    (JsonPiece json_j_j_j_j_j_j, out SampleNamespace.Child[] complaints_i_i_i_i_v_v) => { var r = json_j_j_j_j_j_j.TryReadNull(out complaints_i_i_i_i_v_v) ? json_j_j_j_j_j_j[4..] : json_j_j_j_j_j_j.RemoveArray((JsonPiece json_j_j_j_j_j_j_j, out SampleNamespace.Child complaints_i_i_i_i_v_v_i) => { var r = json_j_j_j_j_j_j_j.TryReadNull(out complaints_i_i_i_i_v_v_i) ? json_j_j_j_j_j_j_j[4..] : json_j_j_j_j_j_j_j.RemoveObject(out complaints_i_i_i_i_v_v_i); return r; }, out complaints_i_i_i_i_v_v); return r; },
-                    out complaints_i_i_i_i_v); return r;
-                    },
-                    out complaints_i_i_i_i); return r;
-                                }, out complaints_i_i_i); return r;
-                            }, out complaints_i_i); return r;
-                        }, out complaints_i); return r;
-                    }, out complaints),
-                    4 => json.TryReadNull(out priorities) ? json[4..] : json.RemoveDictionary(
-                    (JsonPiece json_j, out string priorities_v) => { var r = json_j.TryReadNull(out priorities_v) ? json_j[4..] : json_j.RemoveQuotedValue(j => new string(j), out priorities_v); return r; },
-                    (JsonPiece json_j, out System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> priorities_v) =>
+
+                        if (json.TryReadNull(out complaints))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            ;
+
+                            json = json[1..];
+                            var complaints_item_list = new List<System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][][]>();
+                            while (true)
+                            {
+                                json = json.SkipInsignificantSymbolsLeft();
+                                var complaints_c = json[0];
+                                if (complaints_c == ']')
+                                {
+                                    json = json[1..];
+                                    break;
+                                }
+                                else if (complaints_c == ',')
+                                {
+                                    json = json[1..];
+                                }
+
+                                System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][][] complaints_item;
+
+
+                                if (json.TryReadNull(out complaints_item))
+                                {
+                                    json = json[4..];
+                                }
+                                {
+                                    ;
+
+                                    json = json[1..];
+                                    var complaints_item_item_list = new List<System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][]>();
+                                    while (true)
+                                    {
+                                        json = json.SkipInsignificantSymbolsLeft();
+                                        var complaints_item_c = json[0];
+                                        if (complaints_item_c == ']')
+                                        {
+                                            json = json[1..];
+                                            break;
+                                        }
+                                        else if (complaints_item_c == ',')
+                                        {
+                                            json = json[1..];
+                                        }
+
+                                        System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[][] complaints_item_item;
+
+
+                                        if (json.TryReadNull(out complaints_item_item))
+                                        {
+                                            json = json[4..];
+                                        }
+                                        {
+                                            ;
+
+                                            json = json[1..];
+                                            var complaints_item_item_item_list = new List<System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[]>();
+                                            while (true)
+                                            {
+                                                json = json.SkipInsignificantSymbolsLeft();
+                                                var complaints_item_item_c = json[0];
+                                                if (complaints_item_item_c == ']')
+                                                {
+                                                    json = json[1..];
+                                                    break;
+                                                }
+                                                else if (complaints_item_item_c == ',')
+                                                {
+                                                    json = json[1..];
+                                                }
+
+                                                System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>[] complaints_item_item_item;
+
+
+                                                if (json.TryReadNull(out complaints_item_item_item))
+                                                {
+                                                    json = json[4..];
+                                                }
+                                                {
+                                                    ;
+
+                                                    json = json[1..];
+                                                    var complaints_item_item_item_item_list = new List<System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>>>();
+                                                    while (true)
+                                                    {
+                                                        json = json.SkipInsignificantSymbolsLeft();
+                                                        var complaints_item_item_item_c = json[0];
+                                                        if (complaints_item_item_item_c == ']')
+                                                        {
+                                                            json = json[1..];
+                                                            break;
+                                                        }
+                                                        else if (complaints_item_item_item_c == ',')
+                                                        {
+                                                            json = json[1..];
+                                                        }
+
+                                                        System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> complaints_item_item_item_item;
+
+
+                                                        if (json.TryReadNull(out complaints_item_item_item_item))
+                                                        {
+                                                            json = json[4..];
+                                                        }
+                                                        {
+                                                            ;
+
+                                                            json = json.EnterObject();
+                                                            complaints_item_item_item_item = new();
+                                                            while (true)
+                                                            {
+                                                                json = json.SkipInsignificantSymbolsLeft();
+                                                                var complaints_item_item_item_item_c = json[0];
+                                                                if (complaints_item_item_item_item_c == '}')
+                                                                {
+                                                                    json = json[1..];
+                                                                    break;
+                                                                }
+                                                                else if (complaints_item_item_item_item_c == ',')
+                                                                {
+                                                                    json = json[1..];
+                                                                }
+
+                                                                string complaints_item_item_item_item_key;
+                                                                System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> complaints_item_item_item_item_value;
+
+
+                                                                if (json.TryReadNull(out complaints_item_item_item_item_key))
+                                                                {
+                                                                    json = json[4..];
+                                                                }
+                                                                {
+                                                                    ;
+                                                                    json = json.Remove(out complaints_item_item_item_item_key);
+
+                                                                }
+
+                                                                json = json.SkipToPropertyValue();
+
+
+                                                                if (json.TryReadNull(out complaints_item_item_item_item_value))
+                                                                {
+                                                                    json = json[4..];
+                                                                }
+                                                                {
+                                                                    ;
+
+                                                                    json = json.EnterObject();
+                                                                    complaints_item_item_item_item_value = new();
+                                                                    while (true)
+                                                                    {
+                                                                        json = json.SkipInsignificantSymbolsLeft();
+                                                                        var complaints_item_item_item_item_value_c = json[0];
+                                                                        if (complaints_item_item_item_item_value_c == '}')
+                                                                        {
+                                                                            json = json[1..];
+                                                                            break;
+                                                                        }
+                                                                        else if (complaints_item_item_item_item_value_c == ',')
+                                                                        {
+                                                                            json = json[1..];
+                                                                        }
+
+                                                                        string complaints_item_item_item_item_value_key;
+                                                                        SampleNamespace.Child[] complaints_item_item_item_item_value_value;
+
+
+                                                                        if (json.TryReadNull(out complaints_item_item_item_item_value_key))
+                                                                        {
+                                                                            json = json[4..];
+                                                                        }
+                                                                        {
+                                                                            ;
+                                                                            json = json.Remove(out complaints_item_item_item_item_value_key);
+
+                                                                        }
+
+                                                                        json = json.SkipToPropertyValue();
+
+
+                                                                        if (json.TryReadNull(out complaints_item_item_item_item_value_value))
+                                                                        {
+                                                                            json = json[4..];
+                                                                        }
+                                                                        {
+                                                                            ;
+
+                                                                            json = json[1..];
+                                                                            var complaints_item_item_item_item_value_value_item_list = new List<SampleNamespace.Child>();
+                                                                            while (true)
+                                                                            {
+                                                                                json = json.SkipInsignificantSymbolsLeft();
+                                                                                var complaints_item_item_item_item_value_value_c = json[0];
+                                                                                if (complaints_item_item_item_item_value_value_c == ']')
+                                                                                {
+                                                                                    json = json[1..];
+                                                                                    break;
+                                                                                }
+                                                                                else if (complaints_item_item_item_item_value_value_c == ',')
+                                                                                {
+                                                                                    json = json[1..];
+                                                                                }
+
+                                                                                SampleNamespace.Child complaints_item_item_item_item_value_value_item;
+
+
+                                                                                if (json.TryReadNull(out complaints_item_item_item_item_value_value_item))
+                                                                                {
+                                                                                    json = json[4..];
+                                                                                }
+                                                                                {
+                                                                                    ;
+                                                                                    json = json.RemoveObject(out complaints_item_item_item_item_value_value_item);
+
+                                                                                }
+
+                                                                                complaints_item_item_item_item_value_value_item_list.Add(complaints_item_item_item_item_value_value_item);
+                                                                            }
+                                                                            complaints_item_item_item_item_value_value = complaints_item_item_item_item_value_value_item_list.ToArray();
+
+
+                                                                        }
+
+                                                                        complaints_item_item_item_item_value.Add(complaints_item_item_item_item_value_key, complaints_item_item_item_item_value_value);
+                                                                    }
+
+                                                                }
+
+                                                                complaints_item_item_item_item.Add(complaints_item_item_item_item_key, complaints_item_item_item_item_value);
+                                                            }
+
+                                                        }
+
+                                                        complaints_item_item_item_item_list.Add(complaints_item_item_item_item);
+                                                    }
+                                                    complaints_item_item_item = complaints_item_item_item_item_list.ToArray();
+
+
+                                                }
+
+                                                complaints_item_item_item_list.Add(complaints_item_item_item);
+                                            }
+                                            complaints_item_item = complaints_item_item_item_list.ToArray();
+
+
+                                        }
+
+                                        complaints_item_item_list.Add(complaints_item_item);
+                                    }
+                                    complaints_item = complaints_item_item_list.ToArray();
+
+
+                                }
+
+                                complaints_item_list.Add(complaints_item);
+                            }
+                            complaints = complaints_item_list.ToArray();
+
+
+                        }
+                        break;
+                    }
+                    case 4:
                     {
-                        var r = json_j.TryReadNull(out priorities_v) ? json_j[4..] : json_j.RemoveDictionary(
-                    (JsonPiece json_j_j, out string priorities_v_v) => { var r = json_j_j.TryReadNull(out priorities_v_v) ? json_j_j[4..] : json_j_j.RemoveQuotedValue(j => new string(j), out priorities_v_v); return r; },
-                    (JsonPiece json_j_j, out System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> priorities_v_v) =>
+
+                        if (json.TryReadNull(out priorities))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            ;
+
+                            json = json.EnterObject();
+                            priorities = new();
+                            while (true)
+                            {
+                                json = json.SkipInsignificantSymbolsLeft();
+                                var priorities_c = json[0];
+                                if (priorities_c == '}')
+                                {
+                                    json = json[1..];
+                                    break;
+                                }
+                                else if (priorities_c == ',')
+                                {
+                                    json = json[1..];
+                                }
+
+                                string priorities_key;
+                                System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]>> priorities_value;
+
+
+                                if (json.TryReadNull(out priorities_key))
+                                {
+                                    json = json[4..];
+                                }
+                                {
+                                    ;
+                                    json = json.Remove(out priorities_key);
+
+                                }
+
+                                json = json.SkipToPropertyValue();
+
+
+                                if (json.TryReadNull(out priorities_value))
+                                {
+                                    json = json[4..];
+                                }
+                                {
+                                    ;
+
+                                    json = json.EnterObject();
+                                    priorities_value = new();
+                                    while (true)
+                                    {
+                                        json = json.SkipInsignificantSymbolsLeft();
+                                        var priorities_value_c = json[0];
+                                        if (priorities_value_c == '}')
+                                        {
+                                            json = json[1..];
+                                            break;
+                                        }
+                                        else if (priorities_value_c == ',')
+                                        {
+                                            json = json[1..];
+                                        }
+
+                                        string priorities_value_key;
+                                        System.Collections.Generic.Dictionary<string, SampleNamespace.Child[]> priorities_value_value;
+
+
+                                        if (json.TryReadNull(out priorities_value_key))
+                                        {
+                                            json = json[4..];
+                                        }
+                                        {
+                                            ;
+                                            json = json.Remove(out priorities_value_key);
+
+                                        }
+
+                                        json = json.SkipToPropertyValue();
+
+
+                                        if (json.TryReadNull(out priorities_value_value))
+                                        {
+                                            json = json[4..];
+                                        }
+                                        {
+                                            ;
+
+                                            json = json.EnterObject();
+                                            priorities_value_value = new();
+                                            while (true)
+                                            {
+                                                json = json.SkipInsignificantSymbolsLeft();
+                                                var priorities_value_value_c = json[0];
+                                                if (priorities_value_value_c == '}')
+                                                {
+                                                    json = json[1..];
+                                                    break;
+                                                }
+                                                else if (priorities_value_value_c == ',')
+                                                {
+                                                    json = json[1..];
+                                                }
+
+                                                string priorities_value_value_key;
+                                                SampleNamespace.Child[] priorities_value_value_value;
+
+
+                                                if (json.TryReadNull(out priorities_value_value_key))
+                                                {
+                                                    json = json[4..];
+                                                }
+                                                {
+                                                    ;
+                                                    json = json.Remove(out priorities_value_value_key);
+
+                                                }
+
+                                                json = json.SkipToPropertyValue();
+
+
+                                                if (json.TryReadNull(out priorities_value_value_value))
+                                                {
+                                                    json = json[4..];
+                                                }
+                                                {
+                                                    ;
+
+                                                    json = json[1..];
+                                                    var priorities_value_value_value_item_list = new List<SampleNamespace.Child>();
+                                                    while (true)
+                                                    {
+                                                        json = json.SkipInsignificantSymbolsLeft();
+                                                        var priorities_value_value_value_c = json[0];
+                                                        if (priorities_value_value_value_c == ']')
+                                                        {
+                                                            json = json[1..];
+                                                            break;
+                                                        }
+                                                        else if (priorities_value_value_value_c == ',')
+                                                        {
+                                                            json = json[1..];
+                                                        }
+
+                                                        SampleNamespace.Child priorities_value_value_value_item;
+
+
+                                                        if (json.TryReadNull(out priorities_value_value_value_item))
+                                                        {
+                                                            json = json[4..];
+                                                        }
+                                                        {
+                                                            ;
+                                                            json = json.RemoveObject(out priorities_value_value_value_item);
+
+                                                        }
+
+                                                        priorities_value_value_value_item_list.Add(priorities_value_value_value_item);
+                                                    }
+                                                    priorities_value_value_value = priorities_value_value_value_item_list.ToArray();
+
+
+                                                }
+
+                                                priorities_value_value.Add(priorities_value_value_key, priorities_value_value_value);
+                                            }
+
+                                        }
+
+                                        priorities_value.Add(priorities_value_key, priorities_value_value);
+                                    }
+
+                                }
+
+                                priorities.Add(priorities_key, priorities_value);
+                            }
+
+                        }
+                        break;
+                    }
+                    case 5:
                     {
-                        var r = json_j_j.TryReadNull(out priorities_v_v) ? json_j_j[4..] : json_j_j.RemoveDictionary(
-                    (JsonPiece json_j_j_j, out string priorities_v_v_v) => { var r = json_j_j_j.TryReadNull(out priorities_v_v_v) ? json_j_j_j[4..] : json_j_j_j.RemoveQuotedValue(j => new string(j), out priorities_v_v_v); return r; },
-                    (JsonPiece json_j_j_j, out SampleNamespace.Child[] priorities_v_v_v) => { var r = json_j_j_j.TryReadNull(out priorities_v_v_v) ? json_j_j_j[4..] : json_j_j_j.RemoveArray((JsonPiece json_j_j_j_j, out SampleNamespace.Child priorities_v_v_v_i) => { var r = json_j_j_j_j.TryReadNull(out priorities_v_v_v_i) ? json_j_j_j_j[4..] : json_j_j_j_j.RemoveObject(out priorities_v_v_v_i); return r; }, out priorities_v_v_v); return r; },
-                    out priorities_v_v); return r;
-                    },
-                    out priorities_v); return r;
-                    },
-                    out priorities),
-                    5 => json.TryReadNull(out times) ? json[4..] : json.RemoveDictionary(
-                    (JsonPiece json_j, out System.DateTime times_v) => { var r = json_j.RemoveQuotedValue(j => System.DateTime.Parse(j), out times_v); return r; },
-                    (JsonPiece json_j, out System.TimeSpan times_v) => { var r = json_j.RemoveQuotedValue(j => System.TimeSpan.Parse(j), out times_v); return r; },
-                    out times),
-                    6 => json.RemoveQuotedValue(j => System.TimeSpan.Parse(j), out delays),
-                    7 => json.RemoveQuotedValue(j => j[0], out symbol),
-                    8 => json.TryReadNull(out canBeNull) ? json[4..] : json.RemoveQuotedValue(j => System.DateTime.Parse(j), out canBeNull),
-                    9 => json.TryReadNull(out alsoNullable) ? json[4..] : json.RemoveQuotedValue(j => System.DateTime.Parse(j), out alsoNullable),
-                    _ => json.SkipValue()
+
+                        if (json.TryReadNull(out times))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            ;
+
+                            json = json.EnterObject();
+                            times = new();
+                            while (true)
+                            {
+                                json = json.SkipInsignificantSymbolsLeft();
+                                var times_c = json[0];
+                                if (times_c == '}')
+                                {
+                                    json = json[1..];
+                                    break;
+                                }
+                                else if (times_c == ',')
+                                {
+                                    json = json[1..];
+                                }
+
+                                System.DateTime times_key;
+                                System.TimeSpan times_value;
+
+                                json = json.Remove(out times_key);
+
+                                json = json.SkipToPropertyValue();
+
+                                json = json.Remove(out times_value);
+
+                                times.Add(times_key, times_value);
+                            }
+
+                        }
+                        break;
+                    }
+                    case 6:
+                    {
+                        json = json.Remove(out delays);
+                        break;
+                    }
+                    case 7:
+                    {
+                        json = json.Remove(out symbol);
+                        break;
+                    }
+                    case 8:
+                    {
+
+                        if (json.TryReadNull(out canBeNull))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            System.DateTime canBeNull_Value;
+                            json = json.Remove(out canBeNull_Value);
+                            canBeNull = canBeNull_Value;
+                        }
+                        break;
+                    }
+                    case 9:
+                    {
+
+                        if (json.TryReadNull(out alsoNullable))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            System.DateTime alsoNullable_Value;
+                            json = json.Remove(out alsoNullable_Value);
+                            alsoNullable = alsoNullable_Value;
+                        }
+                        break;
+                    }
+                    default:
+                    {
+                        json = json.SkipValue();
+                        break;
+                    }
                 };
 
                 if (propertyIndex != -1)
@@ -1560,11 +2111,32 @@ namespace SampleNamespace
                     _ => -1
                 };
 
-                json = propertyIndex switch
+                switch (propertyIndex)
                 {
-                    0 => json.RemovePrimitiveValue<int>(j => int.Parse(j), out age),
-                    1 => json.TryReadNull(out name) ? json[4..] : json.RemoveQuotedValue(j => new string(j), out name),
-                    _ => json.SkipValue()
+                    case 0:
+                    {
+                        json = json.Remove(out age);
+                        break;
+                    }
+                    case 1:
+                    {
+
+                        if (json.TryReadNull(out name))
+                        {
+                            json = json[4..];
+                        }
+                        {
+                            ;
+                            json = json.Remove(out name);
+
+                        }
+                        break;
+                    }
+                    default:
+                    {
+                        json = json.SkipValue();
+                        break;
+                    }
                 };
 
                 if (propertyIndex != -1)

@@ -129,7 +129,7 @@ public static class DateTimeFilling
 
         byte result = 1;
         var divisor = 10;
-        while (divisor < n)
+        while (divisor <= n)
         {
             divisor *= 10;
             result++;

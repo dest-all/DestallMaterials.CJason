@@ -103,7 +103,7 @@ public class BenchRunner
     }
 
     private static Father[] CreateManyFathers()
-        => Enumerable.Range(0, 50).Select(i => CreateInstance()).ToArray();
+        => Enumerable.Range(0, 600).Select(i => CreateInstance()).ToArray();
 
     static readonly Father _oneFather;
     static readonly Father[] _manyFathers;

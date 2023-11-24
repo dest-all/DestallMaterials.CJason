@@ -197,26 +197,6 @@ namespace Artifact.Tests
             Assert.AreEqual(escaped, des);
         }
 
-        [Test]
-        public void Deserialize_Speeds()
-        {
-            var fathers = Enumerable.Range(0, 500).Select(i => CreateInstance()).ToArray();
-
-            Father[] standardDeserialized = null;
-
-            var standardRun = MeasureRunTime(() =>
-            {
-                var standardJson = System.Text.Json.JsonSerializer.Serialize(fathers);
-                standardDeserialized = System.Text.Json.JsonSerializer.Deserialize<Father[]>(standardJson);
-            });
-
-            var autogenRun = MeasureRunTime(() =>
-            {
-                var json = SerializeFathers(fathers);
-                DeserializeFathers(json, out var des);
-            });
-        }
-
         static TimeSpan MeasureRunTime(Action action)
         {
             var init = Stopwatch.GetTimestamp();

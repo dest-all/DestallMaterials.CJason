@@ -1,10 +1,7 @@
-using System.Runtime.InteropServices;
-using System.Text.Json;
 using CJason;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using SpanBuilder;
 using static System.IO.Directory;
 
 namespace GenTests;
@@ -25,7 +22,7 @@ public class Generate
 
 
     [Test]
-    public void TestCodeGeneration()
+    public void GenerateCode()
     {
         var tree = CSharpSyntaxTree.ParseText(_sampleClassCode);
 

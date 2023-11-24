@@ -254,18 +254,6 @@ public class UtilityTests
     }
 
     [Test]
-    public void String_ToString()
-    {
-        const string a = "34r3432432dsf";
-
-        var b = a.ToString();
-
-        Assert.IsTrue(object.ReferenceEquals(b, a));
-    }
-
-
-
-    [Test]
     public void Number_Fill()
     {
         int[] numbers = [int.MinValue, int.MaxValue, 0, 324, 12, 34353454];
@@ -284,5 +272,23 @@ public class UtilityTests
         var str1 = new string(new string(span1Orig).TakeWhile(c => c != '\0').ToArray());
 
         Assert.AreEqual(str1, str2);
+    }
+
+    [Test]
+    public void RemoveSeparatedNumbers()
+    {
+        var (n1, n2, n3, n4, n5, n6) = (324, 3534, 43534, 12123, 324, 3243);
+
+        var str = $"{n1}.{n2}:{n3}:{n4}/{n5}/{n6}".AsSpan();
+
+        var (pastNumbers, m1, m2, m3, m4, m5, m6) = str.ReadSeparatedNumbers();
+
+        Assert.True(str[pastNumbers].Length == 0);
+        Assert.AreEqual(n1, m1);
+        Assert.AreEqual(n2, m2);
+        Assert.AreEqual(n3, m3);
+        Assert.AreEqual(n4, m4);
+        Assert.AreEqual(n5, m5);
+        Assert.AreEqual(n6, m6);
     }
 }
